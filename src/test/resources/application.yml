@@ -1,0 +1,13 @@
+spring:
+  application:
+    name: liangyoudemo
+  profiles:
+    active: dev
+  config:
+    import: ""
+  cloud:
+    nacos:
+      config:
+        enabled: false
+        import-check:
+          enabled: false
