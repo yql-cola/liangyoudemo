@@ -13,3 +13,8 @@ spring:
 
 server:
   port: 8080
+
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn

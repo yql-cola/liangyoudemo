@@ -77,6 +77,7 @@ CREATE TABLE sys_user_role (
     role_id BIGINT NOT NULL,
     created_by BIGINT DEFAULT NULL,
     created_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted TINYINT NOT NULL DEFAULT 0,
     UNIQUE KEY uk_user_role (user_id, role_id),
     KEY idx_role_id (role_id)
 ) COMMENT='用户角色关联表';
@@ -87,9 +88,22 @@ CREATE TABLE sys_role_permission (
     permission_id BIGINT NOT NULL,
     created_by BIGINT DEFAULT NULL,
     created_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted TINYINT NOT NULL DEFAULT 0,
     UNIQUE KEY uk_role_permission (role_id, permission_id),
     KEY idx_permission_id (permission_id)
 ) COMMENT='角色权限关联表';
+
+CREATE TABLE sys_user_permission (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    user_id BIGINT NOT NULL COMMENT '用户ID',
+    permission_id BIGINT NOT NULL COMMENT '权限ID',
+    grant_type TINYINT NOT NULL COMMENT '授权类型:1直接授予,0直接撤销',
+    created_by BIGINT DEFAULT NULL,
+    created_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted TINYINT NOT NULL DEFAULT 0,
+    UNIQUE KEY uk_user_permission (user_id, permission_id),
+    KEY idx_user_permission_permission (permission_id)
+) COMMENT='用户直接权限关联表';
 
 CREATE TABLE base_product_category (
     id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '分类ID',
@@ -284,6 +298,7 @@ CREATE TABLE inv_stock (
     available_qty DECIMAL(18,4) NOT NULL DEFAULT 0 COMMENT '可用数量',
     updated_by BIGINT DEFAULT NULL,
     updated_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted TINYINT NOT NULL DEFAULT 0,
     version INT NOT NULL DEFAULT 0,
     UNIQUE KEY uk_stock_warehouse_product (warehouse_id, product_id)
 ) COMMENT='商品库存汇总表';
