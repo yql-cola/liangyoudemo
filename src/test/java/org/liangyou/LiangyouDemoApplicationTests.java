@@ -20,6 +20,15 @@ class LiangyouDemoApplicationTests {
     @Value("${spring.application.name}")
     private String applicationName;
 
+    @Value("${spring.data.redis.host}")
+    private String redisHost;
+
+    @Value("${spring.data.redis.port}")
+    private int redisPort;
+
+    @Value("${spring.data.redis.password:}")
+    private String redisPassword;
+
     @Test
     void contextLoads() {
     }
@@ -32,5 +41,12 @@ class LiangyouDemoApplicationTests {
     @Test
     void applicationNameIsConfigured() {
         Assertions.assertEquals("liangyoudemo", applicationName);
+    }
+
+    @Test
+    void redisFallbackConfigIsConfigured() {
+        Assertions.assertEquals("127.0.0.1", redisHost);
+        Assertions.assertEquals(6379, redisPort);
+        Assertions.assertEquals("", redisPassword);
     }
 }

@@ -4,7 +4,8 @@ spring:
   profiles:
     active: dev
   config:
-    import: optional:nacos:${spring.application.name}-${spring.profiles.active}.yml
+    import:
+      - optional:nacos:${spring.application.name}-${spring.profiles.active}.yml?group=DEFAULT_GROUP&refreshEnabled=true
   cloud:
     nacos:
       config:
