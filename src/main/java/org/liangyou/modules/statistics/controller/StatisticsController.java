@@ -30,10 +30,10 @@ public class StatisticsController {
         return ApiResponse.success(statisticsService.dailyInboundOutbound(request));
     }
 
-    @GetMapping("/monthly/amount-summary")
-    @Operation(summary = "按月查询金额统计", description = "返回月维度金额与数量汇总。权限点：statistics:monthly:view")
-    public ApiResponse<List<AmountSummaryResponse>> monthlyAmountSummary(StatisticsQueryRequest request) {
-        return ApiResponse.success(statisticsService.monthlyAmountSummary(request));
+    @GetMapping("/monthly/inbound-outbound")
+    @Operation(summary = "按月查询进出货统计", description = "返回月维度金额与数量汇总。权限点：statistics:monthly:view")
+    public ApiResponse<List<AmountSummaryResponse>> monthlyInboundOutbound(StatisticsQueryRequest request) {
+        return ApiResponse.success(statisticsService.monthlyInboundOutbound(request));
     }
 
     @GetMapping("/amount-by-customer")

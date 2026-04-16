@@ -26,12 +26,33 @@ class GlobalExceptionHandlerTest {
                 .andExpect(jsonPath("$.message").value("demo-error"));
     }
 
+    @Test
+    void businessExceptionWith401ReturnsUnauthorizedStatus() throws Exception {
+        MockMvc mockMvc = MockMvcBuilders.standaloneSetup(new UnauthorizedDemoController())
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .build();
+
+        mockMvc.perform(get("/unauthorized").contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value(401))
+                .andExpect(jsonPath("$.message").value("unauthorized-demo"));
+    }
+
     @RestController
     static class DemoController {
 
         @GetMapping("/demo")
         public void demo() {
             throw new BusinessException(400, "demo-error");
+        }
+    }
+
+    @RestController
+    static class UnauthorizedDemoController {
+
+        @GetMapping("/unauthorized")
+        public void demo() {
+            throw new BusinessException(401, "unauthorized-demo");
         }
     }
 }

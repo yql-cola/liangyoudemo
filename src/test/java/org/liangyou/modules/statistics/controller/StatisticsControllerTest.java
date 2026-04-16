@@ -17,6 +17,41 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class StatisticsControllerTest {
 
     @Test
+    void monthlyInboundOutboundEndpointExists() throws Exception {
+        StatisticsService statisticsService = new StatisticsService(null, null, null, null, null, null, null) {
+            @Override
+            public List<AmountSummaryResponse> monthlyInboundOutbound(StatisticsQueryRequest request) {
+                return List.of();
+            }
+        };
+        MockMvc mockMvc = MockMvcBuilders.standaloneSetup(new StatisticsController(statisticsService))
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .build();
+
+        mockMvc.perform(get("/api/v1/statistics/monthly/inbound-outbound"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void oldMonthlyAmountSummaryRouteDoesNotInvokeService() throws Exception {
+        boolean[] called = new boolean[1];
+        StatisticsService statisticsService = new StatisticsService(null, null, null, null, null, null, null) {
+            @Override
+            public List<AmountSummaryResponse> monthlyInboundOutbound(StatisticsQueryRequest request) {
+                called[0] = true;
+                return List.of();
+            }
+        };
+        MockMvc mockMvc = MockMvcBuilders.standaloneSetup(new StatisticsController(statisticsService))
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .build();
+
+        mockMvc.perform(get("/api/v1/statistics/monthly/amount-summary"))
+                .andExpect(status().is4xxClientError());
+        org.junit.jupiter.api.Assertions.assertFalse(called[0]);
+    }
+
+    @Test
     void dailyStatisticsEndpointExists() throws Exception {
         StatisticsService statisticsService = new StatisticsService(null, null, null, null, null, null, null) {
             @Override

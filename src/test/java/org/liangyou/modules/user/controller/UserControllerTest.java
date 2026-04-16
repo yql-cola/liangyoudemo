@@ -17,7 +17,7 @@ class UserControllerTest {
 
     @Test
     void createUserReturnsCreatedUserId() throws Exception {
-        UserService userService = new UserService(null, null, null, null) {
+        UserService userService = new UserService(null, null, null, null, null, null) {
             @Override
             public Long createUser(UserCreateRequest request) {
                 return 100L;

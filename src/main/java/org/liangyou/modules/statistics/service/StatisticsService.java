@@ -78,7 +78,7 @@ public class StatisticsService {
         return fallback;
     }
 
-    public List<AmountSummaryResponse> monthlyAmountSummary(StatisticsQueryRequest request) {
+    public List<AmountSummaryResponse> monthlyInboundOutbound(StatisticsQueryRequest request) {
         List<StatMonthlySummary> summaries = statMonthlySummaryMapper == null ? List.of() : statMonthlySummaryMapper.selectList(
                 new LambdaQueryWrapper<StatMonthlySummary>()
                         .eq(request.getWarehouseId() != null, StatMonthlySummary::getWarehouseId, request.getWarehouseId())

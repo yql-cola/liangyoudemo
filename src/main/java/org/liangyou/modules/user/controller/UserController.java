@@ -9,7 +9,6 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.liangyou.common.api.ApiResponse;
 import org.liangyou.common.api.PageResponse;
-import org.liangyou.modules.user.dto.RolePermissionAssignRequest;
 import org.liangyou.modules.user.dto.UserCreateRequest;
 import org.liangyou.modules.user.dto.UserPermissionAssignRequest;
 import org.liangyou.modules.user.dto.UserQueryRequest;
@@ -83,14 +82,6 @@ public class UserController {
     public ApiResponse<Void> assignUserPermissions(@PathVariable Long id,
                                                    @RequestBody UserPermissionAssignRequest request) {
         userService.assignUserPermissions(id, request);
-        return ApiResponse.success(null);
-    }
-
-    @PostMapping("/roles/{roleId}/permissions")
-    @Operation(summary = "给角色分配权限", description = "设置角色拥有的权限集合。权限点：system:role:grant")
-    public ApiResponse<Void> assignRolePermissions(@PathVariable Long roleId,
-                                                   @Valid @RequestBody RolePermissionAssignRequest request) {
-        userService.assignRolePermissions(roleId, request);
         return ApiResponse.success(null);
     }
 

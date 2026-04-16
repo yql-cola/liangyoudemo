@@ -69,6 +69,22 @@ public class OpenApiConfig {
     }
 
     @Bean
+    public GroupedOpenApi roleGroup() {
+        return GroupedOpenApi.builder()
+                .group("Role")
+                .pathsToMatch("/api/v1/roles/**")
+                .build();
+    }
+
+    @Bean
+    public GroupedOpenApi menuGroup() {
+        return GroupedOpenApi.builder()
+                .group("Menu")
+                .pathsToMatch("/api/v1/menus/**")
+                .build();
+    }
+
+    @Bean
     public GroupedOpenApi purchaseGroup() {
         return GroupedOpenApi.builder()
                 .group("Purchase")

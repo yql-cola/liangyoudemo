@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -39,9 +40,10 @@ public class InventoryController {
         return ApiResponse.success(inventoryService.query(request));
     }
 
-    @GetMapping("/batches")
+    @GetMapping("/{productId}/batches")
     @Operation(summary = "查询库存批次明细", description = "按仓库和商品查看所有库存批次。权限点：inventory:batch:list")
-    public ApiResponse<List<InventoryBatchResponse>> batches(Long warehouseId, Long productId) {
+    public ApiResponse<List<InventoryBatchResponse>> batches(@RequestParam(required = false) Long warehouseId,
+                                                             @PathVariable Long productId) {
         return ApiResponse.success(inventoryService.batches(warehouseId, productId));
     }
 

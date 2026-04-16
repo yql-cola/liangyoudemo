@@ -1,34 +1,46 @@
 package org.liangyou.modules.auth.controller;
 
-import java.util.Map;
-
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.ExampleObject;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.liangyou.common.api.ApiResponse;
+import org.liangyou.modules.auth.dto.LoginRequest;
+import org.liangyou.modules.auth.service.AuthService;
+import org.liangyou.modules.auth.vo.CurrentUserResponse;
+import org.liangyou.modules.auth.vo.LoginResponse;
+import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "Auth")
 @RestController
 @RequestMapping("/api/v1/auth")
+@RequiredArgsConstructor
 public class AuthController {
 
+    private final AuthService authService;
+
+    @PostMapping("/login")
+    @Operation(summary = "用户登录")
+    public ApiResponse<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
+        return ApiResponse.success(authService.login(request));
+    }
+
     @GetMapping("/me")
-    @Operation(
-            summary = "获取当前登录用户信息",
-            description = "用于验证认证链路和当前登录上下文。当前项目尚未接入真实登录态时返回 mock 数据。",
-            responses = {
-                    @ApiResponse(responseCode = "200", description = "查询成功", content = @Content(
-                            examples = @ExampleObject(value = """
-                                    {"code":0,"message":"success","data":{"username":"mock-user"}}
-                                    """))),
-                    @ApiResponse(responseCode = "401", description = "未登录或 Token 无效")
-            }
-    )
-    public org.liangyou.common.api.ApiResponse<Map<String, Object>> me() {
-        return org.liangyou.common.api.ApiResponse.success(Map.of("username", "mock-user"));
+    @Operation(summary = "获取当前登录用户信息")
+    public ApiResponse<CurrentUserResponse> me() {
+        return ApiResponse.success(authService.getCurrentUser());
+    }
+
+    @PostMapping("/logout")
+    @Operation(summary = "退出登录")
+    public ApiResponse<Void> logout(@RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorization) {
+        authService.logout(authorization);
+        return ApiResponse.success(null);
     }
 }
