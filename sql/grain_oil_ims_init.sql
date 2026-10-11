@@ -444,3 +444,55 @@ CREATE TABLE stat_monthly_summary (
     KEY idx_monthly_customer_month (customer_id, stat_month),
     KEY idx_monthly_supplier_month (supplier_id, stat_month)
 ) COMMENT='月统计汇总表';
+
+ALTER TABLE sys_user_role
+    ADD COLUMN deleted TINYINT NOT NULL DEFAULT 0 AFTER created_time;
+
+ALTER TABLE sys_role_permission
+    ADD COLUMN deleted TINYINT NOT NULL DEFAULT 0 AFTER created_time;
+
+ALTER TABLE sys_user_permission
+    ADD COLUMN deleted TINYINT NOT NULL DEFAULT 0 AFTER created_time;
+
+
+INSERT INTO sys_role (role_code, role_name, status, remark, deleted, version)
+SELECT 'SUPER_ADMIN', '超级管理员', 1, '系统初始化超级管理员角色', 0, 0
+WHERE NOT EXISTS (
+    SELECT 1 FROM sys_role WHERE role_code = 'SUPER_ADMIN'
+);
+
+INSERT INTO sys_user (username, password, real_name, email, status, is_super_admin, deleted, version)
+SELECT 'admin', 'admin', '管理员', 'admin@local.dev', 1, 1, 0, 0
+WHERE NOT EXISTS (
+    SELECT 1 FROM sys_user WHERE username = 'admin'
+);
+
+INSERT INTO sys_user (username, password, real_name, email, status, is_super_admin, deleted, version)
+SELECT 'yaoqianglong', 'yaoqianglong', '姚强龙', 'yaoqianglong@local.dev', 1, 1, 0, 0
+WHERE NOT EXISTS (
+    SELECT 1 FROM sys_user WHERE username = 'yaoqianglong'
+);
+
+INSERT INTO sys_user_role (user_id, role_id, deleted)
+SELECT u.id, r.id, 0
+FROM sys_user u
+JOIN sys_role r ON r.role_code = 'SUPER_ADMIN'
+WHERE u.username = 'admin'
+  AND NOT EXISTS (
+    SELECT 1
+    FROM sys_user_role ur
+    WHERE ur.user_id = u.id
+      AND ur.role_id = r.id
+);
+
+INSERT INTO sys_user_role (user_id, role_id, deleted)
+SELECT u.id, r.id, 0
+FROM sys_user u
+JOIN sys_role r ON r.role_code = 'SUPER_ADMIN'
+WHERE u.username = 'yaoqianglong'
+  AND NOT EXISTS (
+    SELECT 1
+    FROM sys_user_role ur
+    WHERE ur.user_id = u.id
+      AND ur.role_id = r.id
+);

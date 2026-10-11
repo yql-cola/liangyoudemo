@@ -6,11 +6,18 @@ import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.info.License;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
+import lombok.RequiredArgsConstructor;
 import org.springdoc.core.models.GroupedOpenApi;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.util.StringUtils;
+
+import java.util.LinkedHashSet;
+import java.util.Locale;
+import java.util.Set;
 
 @Configuration
+@RequiredArgsConstructor
 public class OpenApiConfig {
 
     private static final String COMMON_DESCRIPTION = """
@@ -18,7 +25,7 @@ public class OpenApiConfig {
 
             鉴权说明：
             1. 点击右上角 Authorize
-            2. 输入 Bearer Token，格式为：Bearer <JWT>
+            2. 在 Authorization 参数中输入完整值，格式为：Bearer <JWT>
             3. 已开放认证接口无需鉴权，其余接口默认按 BearerAuth 调试
 
             统一错误码：
@@ -33,29 +40,78 @@ public class OpenApiConfig {
             - 列表接口默认使用 pageNum/pageSize 分页参数
             - 金额字段统一使用 decimal，日期字段按接口示例格式传值
             """;
+    private final SwaggerGlobalHeaderProperties swaggerGlobalHeaderProperties;
 
     @Bean
     public OpenAPI openAPI() {
+        Components components = new Components();
+        components.addSecuritySchemes(
+                "BearerAuth",
+                new SecurityScheme()
+                        .type(SecurityScheme.Type.APIKEY)
+                        .in(SecurityScheme.In.HEADER)
+                        .name("Authorization")
+                        .description("请输入完整鉴权值：Bearer <JWT>")
+        );
+
+        SecurityRequirement securityRequirement = new SecurityRequirement().addList("BearerAuth");
+        for (String headerName : resolveGlobalHeaders()) {
+            String schemeName = "GlobalHeader" + toAlphaNumericToken(headerName);
+            components.addSecuritySchemes(
+                    schemeName,
+                    new SecurityScheme()
+                            .type(SecurityScheme.Type.APIKEY)
+                            .in(SecurityScheme.In.HEADER)
+                            .name(headerName)
+                            .description("全局请求头：" + headerName)
+            );
+            securityRequirement.addList(schemeName);
+        }
+
         return new OpenAPI()
                 .info(new Info()
-                        .title("Liangyou Demo API")
+                        .title("粮油管理系统 API（Liangyou Demo API）")
                         .version("v1.0.0")
                         .description(COMMON_DESCRIPTION)
                         .license(new License().name("Internal Use Only")))
-                .addSecurityItem(new SecurityRequirement().addList("BearerAuth"))
-                .components(new Components().addSecuritySchemes(
-                        "BearerAuth",
-                        new SecurityScheme()
-                                .type(SecurityScheme.Type.HTTP)
-                                .scheme("bearer")
-                                .bearerFormat("JWT")
-                ));
+                .addSecurityItem(securityRequirement)
+                .components(components);
+    }
+
+    private Set<String> resolveGlobalHeaders() {
+        Set<String> result = new LinkedHashSet<>();
+        for (String value : swaggerGlobalHeaderProperties.getGlobalHeaders()) {
+            if (!StringUtils.hasText(value)) {
+                continue;
+            }
+            String headerName = value.trim();
+            if ("authorization".equalsIgnoreCase(headerName)) {
+                continue;
+            }
+            result.add(headerName);
+        }
+        return result;
+    }
+
+    private String toAlphaNumericToken(String value) {
+        String[] parts = value.trim().toLowerCase(Locale.ROOT).split("[^a-z0-9]+");
+        StringBuilder builder = new StringBuilder();
+        for (String part : parts) {
+            if (!StringUtils.hasText(part)) {
+                continue;
+            }
+            builder.append(Character.toUpperCase(part.charAt(0)));
+            if (part.length() > 1) {
+                builder.append(part.substring(1));
+            }
+        }
+        return builder.toString();
     }
 
     @Bean
     public GroupedOpenApi authGroup() {
         return GroupedOpenApi.builder()
-                .group("Auth")
+                .group("认证（Auth）")
                 .pathsToMatch("/api/v1/auth/**")
                 .build();
     }
@@ -63,7 +119,7 @@ public class OpenApiConfig {
     @Bean
     public GroupedOpenApi userGroup() {
         return GroupedOpenApi.builder()
-                .group("User")
+                .group("用户（User）")
                 .pathsToMatch("/api/v1/users/**")
                 .build();
     }
@@ -71,7 +127,7 @@ public class OpenApiConfig {
     @Bean
     public GroupedOpenApi roleGroup() {
         return GroupedOpenApi.builder()
-                .group("Role")
+                .group("角色（Role）")
                 .pathsToMatch("/api/v1/roles/**")
                 .build();
     }
@@ -79,7 +135,7 @@ public class OpenApiConfig {
     @Bean
     public GroupedOpenApi menuGroup() {
         return GroupedOpenApi.builder()
-                .group("Menu")
+                .group("菜单（Menu）")
                 .pathsToMatch("/api/v1/menus/**")
                 .build();
     }
@@ -87,7 +143,7 @@ public class OpenApiConfig {
     @Bean
     public GroupedOpenApi purchaseGroup() {
         return GroupedOpenApi.builder()
-                .group("Purchase")
+                .group("采购（Purchase）")
                 .pathsToMatch("/api/v1/purchase-ins/**")
                 .build();
     }
@@ -95,7 +151,7 @@ public class OpenApiConfig {
     @Bean
     public GroupedOpenApi saleGroup() {
         return GroupedOpenApi.builder()
-                .group("Sale")
+                .group("销售（Sale）")
                 .pathsToMatch("/api/v1/sale-outs/**")
                 .build();
     }
@@ -103,7 +159,7 @@ public class OpenApiConfig {
     @Bean
     public GroupedOpenApi inventoryGroup() {
         return GroupedOpenApi.builder()
-                .group("Inventory")
+                .group("库存（Inventory）")
                 .pathsToMatch("/api/v1/inventories/**")
                 .build();
     }
@@ -111,7 +167,7 @@ public class OpenApiConfig {
     @Bean
     public GroupedOpenApi statisticsGroup() {
         return GroupedOpenApi.builder()
-                .group("Statistics")
+                .group("统计（Statistics）")
                 .pathsToMatch("/api/v1/statistics/**")
                 .build();
     }
