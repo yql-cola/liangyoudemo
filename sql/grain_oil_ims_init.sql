@@ -125,8 +125,14 @@ CREATE TABLE base_unit (
     id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '单位ID',
     unit_code VARCHAR(32) NOT NULL COMMENT '单位编码',
     unit_name VARCHAR(32) NOT NULL COMMENT '单位名称',
+    status TINYINT NOT NULL DEFAULT 1 COMMENT '状态:1启用,0停用',
+    remark VARCHAR(255) DEFAULT NULL COMMENT '备注',
     created_by BIGINT DEFAULT NULL,
     created_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_by BIGINT DEFAULT NULL,
+    updated_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted TINYINT NOT NULL DEFAULT 0,
+    version INT NOT NULL DEFAULT 0,
     UNIQUE KEY uk_unit_code (unit_code)
 ) COMMENT='单位表';
 
@@ -160,8 +166,14 @@ CREATE TABLE base_product_unit_convert (
     from_unit_id BIGINT NOT NULL COMMENT '源单位ID',
     to_unit_id BIGINT NOT NULL COMMENT '目标单位ID',
     convert_rate DECIMAL(18,6) NOT NULL COMMENT '换算比率',
+    status TINYINT NOT NULL DEFAULT 1 COMMENT '状态:1启用,0停用',
+    remark VARCHAR(255) DEFAULT NULL COMMENT '备注',
     created_by BIGINT DEFAULT NULL,
     created_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_by BIGINT DEFAULT NULL,
+    updated_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted TINYINT NOT NULL DEFAULT 0,
+    version INT NOT NULL DEFAULT 0,
     UNIQUE KEY uk_product_unit_convert (product_id, from_unit_id, to_unit_id)
 ) COMMENT='商品单位换算表';
 

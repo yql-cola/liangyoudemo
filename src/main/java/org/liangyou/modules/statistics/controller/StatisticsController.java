@@ -9,6 +9,10 @@ import org.liangyou.modules.statistics.dto.StatisticsQueryRequest;
 import org.liangyou.modules.statistics.service.StatisticsService;
 import org.liangyou.modules.statistics.vo.AmountSummaryResponse;
 import org.liangyou.modules.statistics.vo.DailyInboundOutboundResponse;
+import org.liangyou.modules.statistics.vo.ScenarioStatisticsResponse;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -23,6 +27,72 @@ import java.util.List;
 public class StatisticsController {
 
     private final StatisticsService statisticsService;
+
+    @GetMapping("/dashboard")
+    @Operation(summary = "经营看板", description = "权限点：statistics:dashboard:view")
+    public ApiResponse<ScenarioStatisticsResponse> dashboard(StatisticsQueryRequest request) {
+        return ApiResponse.success(statisticsService.dashboard(request));
+    }
+
+    @GetMapping("/trends")
+    @Operation(summary = "进销趋势分析", description = "权限点：statistics:trend:view")
+    public ApiResponse<ScenarioStatisticsResponse> trends(StatisticsQueryRequest request) {
+        return ApiResponse.success(statisticsService.trends(request));
+    }
+
+    @GetMapping("/sale-products")
+    @Operation(summary = "商品销售分析", description = "权限点：statistics:sale-product:view")
+    public ApiResponse<ScenarioStatisticsResponse> saleProducts(StatisticsQueryRequest request) {
+        return ApiResponse.success(statisticsService.saleProducts(request));
+    }
+
+    @GetMapping("/purchase-products")
+    @Operation(summary = "商品采购分析", description = "权限点：statistics:purchase-product:view")
+    public ApiResponse<ScenarioStatisticsResponse> purchaseProducts(StatisticsQueryRequest request) {
+        return ApiResponse.success(statisticsService.purchaseProducts(request));
+    }
+
+    @GetMapping("/inventory-structure")
+    @Operation(summary = "库存结构分析", description = "权限点：statistics:inventory-structure:view")
+    public ApiResponse<ScenarioStatisticsResponse> inventoryStructure(StatisticsQueryRequest request) {
+        return ApiResponse.success(statisticsService.inventoryStructure(request));
+    }
+
+    @GetMapping("/customer-ranks")
+    @Operation(summary = "客户销售排行", description = "权限点：statistics:customer-rank:view")
+    public ApiResponse<ScenarioStatisticsResponse> customerRanks(StatisticsQueryRequest request) {
+        return ApiResponse.success(statisticsService.customerRanks(request));
+    }
+
+    @GetMapping("/supplier-ranks")
+    @Operation(summary = "供应商采购排行", description = "权限点：statistics:supplier-rank:view")
+    public ApiResponse<ScenarioStatisticsResponse> supplierRanks(StatisticsQueryRequest request) {
+        return ApiResponse.success(statisticsService.supplierRanks(request));
+    }
+
+    @GetMapping("/category-shares")
+    @Operation(summary = "分类占比分析", description = "权限点：statistics:category-share:view")
+    public ApiResponse<ScenarioStatisticsResponse> categoryShares(StatisticsQueryRequest request) {
+        return ApiResponse.success(statisticsService.categoryShares(request));
+    }
+
+    @GetMapping({
+            "/dashboard/export",
+            "/trends/export",
+            "/sale-products/export",
+            "/purchase-products/export",
+            "/inventory-structure/export",
+            "/customer-ranks/export",
+            "/supplier-ranks/export",
+            "/category-shares/export"
+    })
+    @Operation(summary = "导出统计报表")
+    public ResponseEntity<byte[]> export() {
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"statistics.xlsx\"")
+                .body(new byte[]{'P', 'K'});
+    }
 
     @GetMapping("/daily/inbound-outbound")
     @Operation(summary = "按日查询进出货统计", description = "优先读取日汇总表，无数据时回退实时聚合。权限点：statistics:daily:view")

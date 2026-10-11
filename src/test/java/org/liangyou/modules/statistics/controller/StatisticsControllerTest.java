@@ -6,6 +6,7 @@ import org.liangyou.modules.statistics.dto.StatisticsQueryRequest;
 import org.liangyou.modules.statistics.service.StatisticsService;
 import org.liangyou.modules.statistics.vo.AmountSummaryResponse;
 import org.liangyou.modules.statistics.vo.DailyInboundOutboundResponse;
+import org.liangyou.modules.statistics.vo.ScenarioStatisticsResponse;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -81,5 +82,56 @@ class StatisticsControllerTest {
 
         mockMvc.perform(get("/api/v1/statistics/amount-by-category"))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void scenarioStatisticsEndpointsExist() throws Exception {
+        StatisticsService statisticsService = new StatisticsService(null, null, null, null, null, null, null) {
+            @Override public ScenarioStatisticsResponse dashboard(StatisticsQueryRequest request) { return new ScenarioStatisticsResponse(); }
+            @Override public ScenarioStatisticsResponse trends(StatisticsQueryRequest request) { return new ScenarioStatisticsResponse(); }
+            @Override public ScenarioStatisticsResponse saleProducts(StatisticsQueryRequest request) { return new ScenarioStatisticsResponse(); }
+            @Override public ScenarioStatisticsResponse purchaseProducts(StatisticsQueryRequest request) { return new ScenarioStatisticsResponse(); }
+            @Override public ScenarioStatisticsResponse inventoryStructure(StatisticsQueryRequest request) { return new ScenarioStatisticsResponse(); }
+            @Override public ScenarioStatisticsResponse customerRanks(StatisticsQueryRequest request) { return new ScenarioStatisticsResponse(); }
+            @Override public ScenarioStatisticsResponse supplierRanks(StatisticsQueryRequest request) { return new ScenarioStatisticsResponse(); }
+            @Override public ScenarioStatisticsResponse categoryShares(StatisticsQueryRequest request) { return new ScenarioStatisticsResponse(); }
+        };
+        MockMvc mockMvc = MockMvcBuilders.standaloneSetup(new StatisticsController(statisticsService))
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .build();
+
+        for (String path : List.of(
+                "/api/v1/statistics/dashboard",
+                "/api/v1/statistics/trends",
+                "/api/v1/statistics/sale-products",
+                "/api/v1/statistics/purchase-products",
+                "/api/v1/statistics/inventory-structure",
+                "/api/v1/statistics/customer-ranks",
+                "/api/v1/statistics/supplier-ranks",
+                "/api/v1/statistics/category-shares")) {
+            mockMvc.perform(get(path))
+                    .andExpect(status().isOk());
+        }
+    }
+
+    @Test
+    void scenarioStatisticsExportEndpointsExist() throws Exception {
+        StatisticsService statisticsService = new StatisticsService(null, null, null, null, null, null, null);
+        MockMvc mockMvc = MockMvcBuilders.standaloneSetup(new StatisticsController(statisticsService))
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .build();
+
+        for (String path : List.of(
+                "/api/v1/statistics/dashboard/export",
+                "/api/v1/statistics/trends/export",
+                "/api/v1/statistics/sale-products/export",
+                "/api/v1/statistics/purchase-products/export",
+                "/api/v1/statistics/inventory-structure/export",
+                "/api/v1/statistics/customer-ranks/export",
+                "/api/v1/statistics/supplier-ranks/export",
+                "/api/v1/statistics/category-shares/export")) {
+            mockMvc.perform(get(path))
+                    .andExpect(status().isOk());
+        }
     }
 }

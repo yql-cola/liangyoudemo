@@ -19,6 +19,7 @@ import org.liangyou.modules.statistics.mapper.StatDailySummaryMapper;
 import org.liangyou.modules.statistics.mapper.StatMonthlySummaryMapper;
 import org.liangyou.modules.statistics.vo.AmountSummaryResponse;
 import org.liangyou.modules.statistics.vo.DailyInboundOutboundResponse;
+import org.liangyou.modules.statistics.vo.ScenarioStatisticsResponse;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -42,6 +43,49 @@ public class StatisticsService {
     private final BizPurchaseInItemMapper purchaseInItemMapper;
     private final BizSaleOutItemMapper saleOutItemMapper;
     private final BaseProductMapper baseProductMapper;
+
+    public ScenarioStatisticsResponse dashboard(StatisticsQueryRequest request) {
+        return emptyScenario();
+    }
+
+    public ScenarioStatisticsResponse trends(StatisticsQueryRequest request) {
+        return emptyScenario();
+    }
+
+    public ScenarioStatisticsResponse saleProducts(StatisticsQueryRequest request) {
+        return emptyScenario();
+    }
+
+    public ScenarioStatisticsResponse purchaseProducts(StatisticsQueryRequest request) {
+        return emptyScenario();
+    }
+
+    public ScenarioStatisticsResponse inventoryStructure(StatisticsQueryRequest request) {
+        return emptyScenario();
+    }
+
+    public ScenarioStatisticsResponse customerRanks(StatisticsQueryRequest request) {
+        return emptyScenario();
+    }
+
+    public ScenarioStatisticsResponse supplierRanks(StatisticsQueryRequest request) {
+        return emptyScenario();
+    }
+
+    public ScenarioStatisticsResponse categoryShares(StatisticsQueryRequest request) {
+        return emptyScenario();
+    }
+
+    private ScenarioStatisticsResponse emptyScenario() {
+        ScenarioStatisticsResponse response = new ScenarioStatisticsResponse();
+        ScenarioStatisticsResponse.Metric amount = new ScenarioStatisticsResponse.Metric();
+        amount.setKey("amount");
+        amount.setName("金额");
+        amount.setValue(BigDecimal.ZERO);
+        response.setMetrics(List.of(amount));
+        response.setRows(List.of());
+        return response;
+    }
 
     public List<DailyInboundOutboundResponse> dailyInboundOutbound(StatisticsQueryRequest request) {
         List<StatDailySummary> summaries = statDailySummaryMapper == null ? List.of() : statDailySummaryMapper.selectList(
