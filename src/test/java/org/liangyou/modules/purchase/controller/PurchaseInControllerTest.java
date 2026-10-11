@@ -18,6 +18,7 @@ import java.util.List;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -92,5 +93,39 @@ class PurchaseInControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0));
+    }
+
+    @Test
+    void detailReturnsMasterDataNames() throws Exception {
+        PurchaseInService purchaseInService = new PurchaseInService(null, null, null, null, null) {
+            @Override
+            public org.liangyou.modules.purchase.vo.PurchaseInDetailResponse detail(Long id) {
+                org.liangyou.modules.purchase.vo.PurchaseInDetailResponse response =
+                        new org.liangyou.modules.purchase.vo.PurchaseInDetailResponse();
+                response.setId(id);
+                response.setWarehouseId(1L);
+                response.setWarehouseName("总仓");
+                response.setSupplierId(2L);
+                response.setSupplierName("粮油供应商");
+                org.liangyou.modules.purchase.vo.PurchaseInDetailResponse.Item item =
+                        new org.liangyou.modules.purchase.vo.PurchaseInDetailResponse.Item();
+                item.setProductId(3L);
+                item.setProductName("东北大米");
+                item.setUnitId(4L);
+                item.setUnitName("公斤");
+                response.setItems(List.of(item));
+                return response;
+            }
+        };
+        MockMvc mockMvc = MockMvcBuilders.standaloneSetup(new PurchaseInController(purchaseInService))
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .build();
+
+        mockMvc.perform(get("/api/v1/purchase-ins/200"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.warehouseName").value("总仓"))
+                .andExpect(jsonPath("$.data.supplierName").value("粮油供应商"))
+                .andExpect(jsonPath("$.data.items[0].productName").value("东北大米"))
+                .andExpect(jsonPath("$.data.items[0].unitName").value("公斤"));
     }
 }

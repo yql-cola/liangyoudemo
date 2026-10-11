@@ -17,8 +17,12 @@ public class SaleOutDetailResponse {
     private String orderNo;
     @Schema(description = "仓库 ID", example = "1")
     private Long warehouseId;
+    @Schema(description = "仓库名称", example = "总仓")
+    private String warehouseName;
     @Schema(description = "客户 ID", example = "20")
     private Long customerId;
+    @Schema(description = "客户名称", example = "门店客户")
+    private String customerName;
     @Schema(description = "业务日期", example = "2026-04-16")
     private LocalDate bizDate;
     @Schema(description = "总金额", example = "3000.00")
@@ -37,8 +41,12 @@ public class SaleOutDetailResponse {
         private Long id;
         @Schema(description = "商品 ID", example = "1001")
         private Long productId;
+        @Schema(description = "商品名称", example = "东北大米")
+        private String productName;
         @Schema(description = "单位 ID", example = "1")
         private Long unitId;
+        @Schema(description = "单位名称", example = "公斤")
+        private String unitName;
         @Schema(description = "数量", example = "20")
         private BigDecimal qty;
         @Schema(description = "销售单价", example = "150.00")

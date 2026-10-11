@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 import org.liangyou.common.api.PageResponse;
 import org.liangyou.common.exception.BusinessException;
+import org.liangyou.modules.basic.service.BasicDataService;
 import org.liangyou.modules.inventory.entity.InvBatch;
 import org.liangyou.modules.inventory.entity.InvSaleBatchDeduction;
 import org.liangyou.modules.inventory.entity.InvStock;
@@ -21,6 +22,7 @@ import org.liangyou.modules.sale.entity.BizSaleOutItem;
 import org.liangyou.modules.sale.mapper.BizSaleOutItemMapper;
 import org.liangyou.modules.sale.mapper.BizSaleOutMapper;
 import org.liangyou.modules.sale.vo.SaleOutDetailResponse;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -42,6 +44,12 @@ public class SaleOutService {
     private final InvBatchMapper invBatchMapper;
     private final InvStockFlowMapper invStockFlowMapper;
     private final InvSaleBatchDeductionMapper invSaleBatchDeductionMapper;
+    private BasicDataService basicDataService;
+
+    @Autowired(required = false)
+    public void setBasicDataService(BasicDataService basicDataService) {
+        this.basicDataService = basicDataService;
+    }
 
     @Transactional
     public Long create(SaleOutCreateRequest request) {
@@ -68,6 +76,7 @@ public class SaleOutService {
     }
 
     private Long createSaleOut(String orderNo, SaleOutCreateRequest request) {
+        validateMasterData(request);
         BizSaleOut saleOut = new BizSaleOut();
         saleOut.setOrderNo(orderNo == null ? "SO" + LocalDateTime.now().format(ORDER_NO_FORMATTER) : orderNo);
         saleOut.setWarehouseId(request.getWarehouseId());
@@ -151,6 +160,15 @@ public class SaleOutService {
         }
 
         return saleOut.getId();
+    }
+
+    private void validateMasterData(SaleOutCreateRequest request) {
+        if (basicDataService == null) {
+            return;
+        }
+        basicDataService.validateSaleMasterData(request.getWarehouseId(), request.getCustomerId(),
+                request.getItems().stream().map(SaleOutItemRequest::getProductId).toList(),
+                request.getItems().stream().map(SaleOutItemRequest::getUnitId).toList());
     }
 
     public PageResponse<SaleOutDetailResponse> query(SaleOutQueryRequest request) {

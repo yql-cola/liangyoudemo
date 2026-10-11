@@ -9,6 +9,10 @@ import org.liangyou.modules.basic.mapper.BaseProductUnitConvertMapper;
 import org.liangyou.modules.basic.mapper.BaseSupplierMapper;
 import org.liangyou.modules.basic.mapper.BaseUnitMapper;
 import org.liangyou.modules.basic.mapper.BaseWarehouseMapper;
+import org.liangyou.modules.basic.entity.BaseCustomer;
+import org.liangyou.modules.basic.entity.BaseSupplier;
+import org.liangyou.modules.basic.entity.BaseUnit;
+import org.liangyou.modules.basic.entity.BaseWarehouse;
 import org.liangyou.modules.basic.vo.BasicOptionResponse;
 import org.liangyou.modules.inventory.mapper.InvBatchMapper;
 import org.liangyou.modules.inventory.mapper.InvStockFlowMapper;
@@ -98,6 +102,40 @@ class BasicDataServiceTest {
         assertEquals("P001", options.get(0).getCode());
         assertEquals("东北大米", options.get(0).getName());
         assertEquals(1, options.get(0).getStatus());
+    }
+
+    @Test
+    void validatePurchaseMasterDataRejectsDisabledSupplier() {
+        BasicDataService service = service();
+        BaseWarehouse warehouse = new BaseWarehouse();
+        warehouse.setStatus(1);
+        BaseSupplier supplier = new BaseSupplier();
+        supplier.setStatus(0);
+        when(warehouseMapper.selectById(1L)).thenReturn(warehouse);
+        when(supplierMapper.selectById(2L)).thenReturn(supplier);
+
+        BusinessException exception = assertThrows(BusinessException.class,
+                () -> service.validatePurchaseMasterData(1L, 2L, List.of(3L), List.of(4L)));
+
+        assertEquals(400, exception.getCode());
+        assertEquals("basic-data-disabled", exception.getMessage());
+    }
+
+    @Test
+    void validateSaleMasterDataRejectsDisabledCustomer() {
+        BasicDataService service = service();
+        BaseWarehouse warehouse = new BaseWarehouse();
+        warehouse.setStatus(1);
+        BaseCustomer customer = new BaseCustomer();
+        customer.setStatus(0);
+        when(warehouseMapper.selectById(1L)).thenReturn(warehouse);
+        when(customerMapper.selectById(2L)).thenReturn(customer);
+
+        BusinessException exception = assertThrows(BusinessException.class,
+                () -> service.validateSaleMasterData(1L, 2L, List.of(3L), List.of(4L)));
+
+        assertEquals(400, exception.getCode());
+        assertEquals("basic-data-disabled", exception.getMessage());
     }
 
     private BasicDataService service() {

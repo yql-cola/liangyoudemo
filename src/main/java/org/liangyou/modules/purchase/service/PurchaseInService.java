@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 import org.liangyou.common.api.PageResponse;
 import org.liangyou.common.exception.BusinessException;
+import org.liangyou.modules.basic.service.BasicDataService;
 import org.liangyou.modules.inventory.entity.InvBatch;
 import org.liangyou.modules.inventory.entity.InvStock;
 import org.liangyou.modules.inventory.entity.InvStockFlow;
@@ -22,6 +23,7 @@ import org.liangyou.modules.purchase.vo.PurchaseInDetailResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -39,6 +41,12 @@ public class PurchaseInService {
     private final InvStockMapper invStockMapper;
     private final InvBatchMapper invBatchMapper;
     private final InvStockFlowMapper invStockFlowMapper;
+    private BasicDataService basicDataService;
+
+    @Autowired(required = false)
+    public void setBasicDataService(BasicDataService basicDataService) {
+        this.basicDataService = basicDataService;
+    }
 
     @Transactional
     public Long create(PurchaseInCreateRequest request) {
@@ -65,6 +73,7 @@ public class PurchaseInService {
     }
 
     private Long createPurchaseIn(String orderNo, PurchaseInCreateRequest request) {
+        validateMasterData(request);
         BizPurchaseIn purchaseIn = new BizPurchaseIn();
         purchaseIn.setOrderNo(orderNo == null ? "PI" + LocalDateTime.now().format(ORDER_NO_FORMATTER) : orderNo);
         purchaseIn.setWarehouseId(request.getWarehouseId());
@@ -126,6 +135,15 @@ public class PurchaseInService {
         }
 
         return purchaseIn.getId();
+    }
+
+    private void validateMasterData(PurchaseInCreateRequest request) {
+        if (basicDataService == null) {
+            return;
+        }
+        basicDataService.validatePurchaseMasterData(request.getWarehouseId(), request.getSupplierId(),
+                request.getItems().stream().map(PurchaseInItemRequest::getProductId).toList(),
+                request.getItems().stream().map(PurchaseInItemRequest::getUnitId).toList());
     }
 
     public PageResponse<PurchaseInDetailResponse> query(PurchaseInQueryRequest request) {

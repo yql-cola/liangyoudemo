@@ -17,6 +17,7 @@ import java.util.List;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -85,5 +86,39 @@ class SaleOutControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0));
+    }
+
+    @Test
+    void detailReturnsMasterDataNames() throws Exception {
+        SaleOutService saleOutService = new SaleOutService(null, null, null, null, null, null) {
+            @Override
+            public org.liangyou.modules.sale.vo.SaleOutDetailResponse detail(Long id) {
+                org.liangyou.modules.sale.vo.SaleOutDetailResponse response =
+                        new org.liangyou.modules.sale.vo.SaleOutDetailResponse();
+                response.setId(id);
+                response.setWarehouseId(1L);
+                response.setWarehouseName("总仓");
+                response.setCustomerId(2L);
+                response.setCustomerName("门店客户");
+                org.liangyou.modules.sale.vo.SaleOutDetailResponse.Item item =
+                        new org.liangyou.modules.sale.vo.SaleOutDetailResponse.Item();
+                item.setProductId(3L);
+                item.setProductName("东北大米");
+                item.setUnitId(4L);
+                item.setUnitName("公斤");
+                response.setItems(List.of(item));
+                return response;
+            }
+        };
+        MockMvc mockMvc = MockMvcBuilders.standaloneSetup(new SaleOutController(saleOutService))
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .build();
+
+        mockMvc.perform(get("/api/v1/sale-outs/300"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.warehouseName").value("总仓"))
+                .andExpect(jsonPath("$.data.customerName").value("门店客户"))
+                .andExpect(jsonPath("$.data.items[0].productName").value("东北大米"))
+                .andExpect(jsonPath("$.data.items[0].unitName").value("公斤"));
     }
 }

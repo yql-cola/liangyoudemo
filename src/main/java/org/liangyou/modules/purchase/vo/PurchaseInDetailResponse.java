@@ -18,8 +18,12 @@ public class PurchaseInDetailResponse {
     private String orderNo;
     @Schema(description = "仓库 ID", example = "1")
     private Long warehouseId;
+    @Schema(description = "仓库名称", example = "总仓")
+    private String warehouseName;
     @Schema(description = "供应商 ID", example = "10")
     private Long supplierId;
+    @Schema(description = "供应商名称", example = "粮油供应商")
+    private String supplierName;
     @Schema(description = "业务日期", example = "2026-04-16")
     private LocalDate bizDate;
     @Schema(description = "总金额", example = "12050.00")
@@ -38,8 +42,12 @@ public class PurchaseInDetailResponse {
         private Long id;
         @Schema(description = "商品 ID", example = "1001")
         private Long productId;
+        @Schema(description = "商品名称", example = "东北大米")
+        private String productName;
         @Schema(description = "单位 ID", example = "1")
         private Long unitId;
+        @Schema(description = "单位名称", example = "公斤")
+        private String unitName;
         @Schema(description = "数量", example = "100")
         private BigDecimal qty;
         @Schema(description = "单价", example = "120.50")

@@ -143,6 +143,20 @@ public class BasicDataService {
         baseProductMapper.deleteById(id);
     }
 
+    public void validatePurchaseMasterData(Long warehouseId, Long supplierId, List<Long> productIds, List<Long> unitIds) {
+        requireEnabled(warehouseMapper.selectById(warehouseId));
+        requireEnabled(supplierMapper.selectById(supplierId));
+        productIds.forEach(productId -> requireEnabled(baseProductMapper.selectById(productId)));
+        unitIds.forEach(unitId -> requireEnabled(unitMapper.selectById(unitId)));
+    }
+
+    public void validateSaleMasterData(Long warehouseId, Long customerId, List<Long> productIds, List<Long> unitIds) {
+        requireEnabled(warehouseMapper.selectById(warehouseId));
+        requireEnabled(customerMapper.selectById(customerId));
+        productIds.forEach(productId -> requireEnabled(baseProductMapper.selectById(productId)));
+        unitIds.forEach(unitId -> requireEnabled(unitMapper.selectById(unitId)));
+    }
+
     public PageResponse<BaseProductCategory> queryCategories(BasicQueryRequest request) {
         Page<BaseProductCategory> page = new Page<>(request.getPageNum(), request.getPageSize());
         Page<BaseProductCategory> result = categoryMapper.selectPage(page, new LambdaQueryWrapper<BaseProductCategory>()
@@ -508,6 +522,27 @@ public class BasicDataService {
             throw new BusinessException(404, "basic-data-not-found");
         }
         return entity;
+    }
+
+    private void requireEnabled(Object entity) {
+        if (entity == null) {
+            throw new BusinessException(404, "basic-data-not-found");
+        }
+        Integer status = null;
+        if (entity instanceof BaseWarehouse warehouse) {
+            status = warehouse.getStatus();
+        } else if (entity instanceof BaseSupplier supplier) {
+            status = supplier.getStatus();
+        } else if (entity instanceof BaseCustomer customer) {
+            status = customer.getStatus();
+        } else if (entity instanceof BaseProduct product) {
+            status = product.getStatus();
+        } else if (entity instanceof BaseUnit unit) {
+            status = unit.getStatus();
+        }
+        if (status == null || status != 1) {
+            throw new BusinessException(400, "basic-data-disabled");
+        }
     }
 
     private BasicOptionResponse option(Long id, String code, String name, Integer status) {
