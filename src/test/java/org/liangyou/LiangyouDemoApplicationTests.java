@@ -7,19 +7,30 @@ import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.web.servlet.MockMvc;
 import org.springdoc.core.models.GroupedOpenApi;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
 @SpringBootTest
+@AutoConfigureMockMvc
 @ActiveProfiles("dev")
 class LiangyouDemoApplicationTests {
 
     @Autowired
     private Environment environment;
+
+    @Autowired
+    private MockMvc mockMvc;
 
     @Autowired
     private List<GroupedOpenApi> groupedOpenApis;
@@ -73,5 +84,12 @@ class LiangyouDemoApplicationTests {
                 "Inventory",
                 "Statistics"
         )));
+    }
+
+    @Test
+    void apiDocsEndpointIsPublic() throws Exception {
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));
     }
 }

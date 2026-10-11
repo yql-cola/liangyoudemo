@@ -231,6 +231,20 @@ No new business tables are required for this slice.
 
 Redis is assumed to be available for logout revocation and optional session summary storage.
 
+### Incremental Migration For Existing Dev Databases
+
+Some local databases were initialized from older schema snapshots and may miss the `deleted` column in relation tables.
+
+If startup fails with `Unknown column 'deleted'`, apply:
+
+- `sql/grain_oil_ims_patch_2026_04_16_soft_delete_columns.sql`
+
+This patch adds `deleted` to:
+
+- `sys_user_role`
+- `sys_role_permission`
+- `sys_user_permission`
+
 ## Testing Strategy
 
 Use TDD for all new and changed behavior.
@@ -276,6 +290,27 @@ Expected code additions or changes:
 - controller path updates for inventory and statistics
 - updated Knife4j/OpenAPI docs
 - new controller and service tests
+
+### Swagger Group Naming Convention
+
+- Group display names use `中文（English）` format with full-width parentheses.
+- English segment keeps existing module capitalization style (`Auth`, `User`, `Role`, etc.).
+- `pathsToMatch` is stable; only display names are changed.
+
+Current mapping:
+
+- `Auth` -> `认证（Auth）`
+- `User` -> `用户（User）`
+- `Role` -> `角色（Role）`
+- `Menu` -> `菜单（Menu）`
+- `Purchase` -> `采购（Purchase）`
+- `Sale` -> `销售（Sale）`
+- `Inventory` -> `库存（Inventory）`
+- `Statistics` -> `统计（Statistics）`
+
+Migration note:
+
+- If callers use `/v3/api-docs/{group}`, they must switch from old English names to the new bilingual names.
 
 ## Risks
 
