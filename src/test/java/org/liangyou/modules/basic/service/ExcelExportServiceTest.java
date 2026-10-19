@@ -55,4 +55,25 @@ class ExcelExportServiceTest {
             assertEquals(0, workbook.getSheetAt(0).getLastRowNum());
         }
     }
+
+    @Test
+    void inventoryFlowExportUsesChineseHeadersAndTypeNames() throws Exception {
+        Map<String, Object> row = new LinkedHashMap<>();
+        row.put("flowType", "purchase_in_reverse"); row.put("bizType", "purchase_in_reverse");
+        row.put("changeQty", 2);
+        try (XSSFWorkbook workbook = new XSSFWorkbook(new ByteArrayInputStream(new ExcelExportService().export("inventory-flows", List.of(row))))) {
+            var sheet = workbook.getSheetAt(0);
+            assertEquals("流水类型", sheet.getRow(0).getCell(5).getStringCellValue());
+            assertEquals("业务类型", sheet.getRow(0).getCell(6).getStringCellValue());
+            assertEquals("采购入库撤销", sheet.getRow(1).getCell(5).getStringCellValue());
+        }
+    }
+
+    @Test
+    void emptyInventoryExportStillUsesChineseColumns() throws Exception {
+        try (XSSFWorkbook workbook = new XSSFWorkbook(new ByteArrayInputStream(new ExcelExportService().export("inventories", List.of())))) {
+            assertEquals("仓库", workbook.getSheetAt(0).getRow(0).getCell(0).getStringCellValue());
+            assertEquals("总基础数量", workbook.getSheetAt(0).getRow(0).getCell(5).getStringCellValue());
+        }
+    }
 }

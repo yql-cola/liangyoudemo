@@ -1,6 +1,10 @@
 spring:
   application:
     name: liangyoudemo
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
   profiles:
     active: dev
   config:

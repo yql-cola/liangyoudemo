@@ -106,6 +106,7 @@ service.interceptors.response.use(
     }
 
     error.message = translateApiError(message || error.message || '请求失败')
+    if (error.response && error.response.data && error.response.data.data) error.importResult = error.response.data.data
     Message.error(error.message)
     return Promise.reject(error)
   }

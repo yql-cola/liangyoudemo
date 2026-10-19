@@ -172,7 +172,7 @@ public class BasicDataService {
     @Transactional
     public void validateSaleMasterData(Long warehouseId, Long customerId, List<Long> productIds, List<Long> unitIds) {
         assertWarehouseEnabled(warehouseId);
-        requireEnabled(master(customerMapper, customerId));
+        if (customerId != null) requireEnabled(master(customerMapper, customerId));
         validateProductUnits(productIds, unitIds);
     }
 
@@ -444,6 +444,27 @@ public class BasicDataService {
 
     public BaseCustomer customerDetail(Long id) {
         return require(master(customerMapper, id));
+    }
+
+    public List<BaseCustomer> searchCustomers(String keyword) {
+        if (!StringUtils.hasText(keyword)) return List.of();
+        return customerMapper.selectList(new LambdaQueryWrapper<BaseCustomer>()
+                .eq(BaseCustomer::getStatus, 1)
+                .and(w -> w.like(BaseCustomer::getCustomerName, keyword.trim())
+                        .or().like(BaseCustomer::getCustomerCode, keyword.trim())
+                        .or().like(BaseCustomer::getContactPhone, keyword.trim()))
+                .orderByDesc(BaseCustomer::getId).last("LIMIT 20"));
+    }
+
+    @Transactional
+    public BaseCustomer quickCreateCustomer(String name, String contact, String phone, String address) {
+        if (!StringUtils.hasText(name) || name.length() > 128) throw new BusinessException(400, "customer-name-required");
+        BaseCustomer customer = new BaseCustomer();
+        customer.setCustomerCode("C" + java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 20));
+        customer.setCustomerName(name.trim()); customer.setContactName(contact);
+        customer.setContactPhone(phone); customer.setAddress(address); customer.setStatus(1);
+        write(() -> customerMapper.insert(customer));
+        return customer;
     }
 
     @Transactional
@@ -1015,6 +1036,7 @@ public class BasicDataService {
 
     private LambdaQueryWrapper<BaseProductUnitConvert> convertQuery(BasicQueryRequest request) {
         LambdaQueryWrapper<BaseProductUnitConvert> query = new LambdaQueryWrapper<BaseProductUnitConvert>()
+                .in(request.getIds() != null && !request.getIds().isEmpty(), BaseProductUnitConvert::getId, request.getIds())
                 .eq(request.getProductId() != null, BaseProductUnitConvert::getProductId, request.getProductId())
                 .eq(request.getFromUnitId() != null, BaseProductUnitConvert::getFromUnitId, request.getFromUnitId())
                 .eq(request.getToUnitId() != null, BaseProductUnitConvert::getToUnitId, request.getToUnitId())
@@ -1031,6 +1053,7 @@ public class BasicDataService {
 
     private LambdaQueryWrapper<BaseProduct> productQuery(ProductQueryRequest request) {
         return new LambdaQueryWrapper<BaseProduct>()
+                .in(request.getIds() != null && !request.getIds().isEmpty(), BaseProduct::getId, request.getIds())
                 .and(StringUtils.hasText(request.getKeyword()), w -> w.like(BaseProduct::getProductName, request.getKeyword())
                         .or().like(BaseProduct::getProductCode, request.getKeyword()).or().like(BaseProduct::getBarcode, request.getKeyword()))
                 .like(StringUtils.hasText(request.getProductCode()), BaseProduct::getProductCode, request.getProductCode())
@@ -1041,6 +1064,7 @@ public class BasicDataService {
 
     private LambdaQueryWrapper<BaseProductCategory> categoryQuery(BasicQueryRequest request) {
         return new LambdaQueryWrapper<BaseProductCategory>()
+                .in(request.getIds() != null && !request.getIds().isEmpty(), BaseProductCategory::getId, request.getIds())
                 .and(StringUtils.hasText(request.getKeyword()), w -> w.like(BaseProductCategory::getCategoryName, request.getKeyword()))
                 .like(StringUtils.hasText(request.getName()), BaseProductCategory::getCategoryName, request.getName())
                 .eq(request.getStatus() != null, BaseProductCategory::getStatus, request.getStatus())
@@ -1049,6 +1073,7 @@ public class BasicDataService {
 
     private LambdaQueryWrapper<BaseUnit> unitQuery(BasicQueryRequest request) {
         return new LambdaQueryWrapper<BaseUnit>()
+                .in(request.getIds() != null && !request.getIds().isEmpty(), BaseUnit::getId, request.getIds())
                 .and(StringUtils.hasText(request.getKeyword()), w -> w.like(BaseUnit::getUnitName, request.getKeyword()).or().like(BaseUnit::getUnitCode, request.getKeyword()))
                 .like(StringUtils.hasText(request.getName()), BaseUnit::getUnitName, request.getName())
                 .like(StringUtils.hasText(request.getCode()), BaseUnit::getUnitCode, request.getCode())
@@ -1057,6 +1082,7 @@ public class BasicDataService {
 
     private LambdaQueryWrapper<BaseWarehouse> warehouseQuery(BasicQueryRequest request) {
         return new LambdaQueryWrapper<BaseWarehouse>()
+                .in(request.getIds() != null && !request.getIds().isEmpty(), BaseWarehouse::getId, request.getIds())
                 .and(StringUtils.hasText(request.getKeyword()), w -> w.like(BaseWarehouse::getWarehouseName, request.getKeyword()).or().like(BaseWarehouse::getWarehouseCode, request.getKeyword()))
                 .like(StringUtils.hasText(request.getName()), BaseWarehouse::getWarehouseName, request.getName())
                 .like(StringUtils.hasText(request.getCode()), BaseWarehouse::getWarehouseCode, request.getCode())
@@ -1065,6 +1091,7 @@ public class BasicDataService {
 
     private LambdaQueryWrapper<BaseSupplier> supplierQuery(BasicQueryRequest request) {
         return new LambdaQueryWrapper<BaseSupplier>()
+                .in(request.getIds() != null && !request.getIds().isEmpty(), BaseSupplier::getId, request.getIds())
                 .and(StringUtils.hasText(request.getKeyword()), w -> w.like(BaseSupplier::getSupplierName, request.getKeyword()).or().like(BaseSupplier::getSupplierCode, request.getKeyword())
                         .or().like(BaseSupplier::getContactName, request.getKeyword()).or().like(BaseSupplier::getContactPhone, request.getKeyword()))
                 .like(StringUtils.hasText(request.getName()), BaseSupplier::getSupplierName, request.getName())
@@ -1074,6 +1101,7 @@ public class BasicDataService {
 
     private LambdaQueryWrapper<BaseCustomer> customerQuery(BasicQueryRequest request) {
         return new LambdaQueryWrapper<BaseCustomer>()
+                .in(request.getIds() != null && !request.getIds().isEmpty(), BaseCustomer::getId, request.getIds())
                 .and(StringUtils.hasText(request.getKeyword()), w -> w.like(BaseCustomer::getCustomerName, request.getKeyword()).or().like(BaseCustomer::getCustomerCode, request.getKeyword())
                         .or().like(BaseCustomer::getContactName, request.getKeyword()).or().like(BaseCustomer::getContactPhone, request.getKeyword()))
                 .like(StringUtils.hasText(request.getName()), BaseCustomer::getCustomerName, request.getName())
@@ -1083,14 +1111,16 @@ public class BasicDataService {
 
     /** All matching records, deliberately independent of request pagination. */
     public List<Map<String, Object>> exportProducts(ProductQueryRequest request) {
-        return exportRows(baseProductMapper.selectList(productQuery(request)).stream().map(this::toProductResponse).toList(),
+        List<Map<String, Object>> rows = exportRows(baseProductMapper.selectList(productQuery(request)).stream().map(this::toProductResponse).toList(),
                 "商品编码", "productCode", "商品名称", "productName", "分类", "categoryName", "品牌", "brandName", "规格", "spec",
                 "条码", "barcode", "基础单位", "baseUnitName", "保质期天数", "shelfLifeDays", "状态", "status", "备注", "remark",
                 "创建时间", "createdTime", "更新时间", "updatedTime");
+        verifyExportSelection(request.getIds(), rows.size());
+        return rows;
     }
 
     public List<Map<String, Object>> exportBasic(String resource, BasicQueryRequest request) {
-        return switch (resource) {
+        List<Map<String, Object>> rows = switch (resource) {
             case "categories" -> exportRows(categoryMapper.selectList(categoryQuery(request)),
                     "分类名称", "categoryName", "父分类", "parentId", "排序", "sortNo", "状态", "status", "备注", "remark");
             case "units" -> exportRows(unitMapper.selectList(unitQuery(request)),
@@ -1108,6 +1138,14 @@ public class BasicDataService {
                     "商品名称", "productName", "源单位", "fromUnitName", "目标单位", "toUnitName", "换算比例", "convertRate", "状态", "status", "备注", "remark");
             default -> throw new BusinessException(400, "basic-resource-invalid");
         };
+        verifyExportSelection(request.getIds(), rows.size());
+        return rows;
+    }
+
+    private void verifyExportSelection(List<Long> ids, int rows) {
+        // Never return a silently truncated selected export when a record was removed meanwhile.
+        if (ids != null && new HashSet<>(ids).size() != rows)
+            throw new BusinessException(400, "basic-export-selection-stale");
     }
 
     private List<Map<String, Object>> exportRows(List<?> entities, String... columns) {

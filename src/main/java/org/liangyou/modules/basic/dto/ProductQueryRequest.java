@@ -19,4 +19,5 @@ public class ProductQueryRequest {
     @Min(value = 0, message = "status-invalid")
     @Max(value = 1, message = "status-invalid")
     private Integer status;
+    private java.util.List<Long> ids;
 }

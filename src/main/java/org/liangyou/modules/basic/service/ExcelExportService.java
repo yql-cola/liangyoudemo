@@ -7,6 +7,7 @@ import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.liangyou.modules.inventory.service.InventoryMovementType;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -36,7 +37,47 @@ public class ExcelExportService {
 
     /** LinkedHashMap keys determine column order; all matching rows are written. */
     public byte[] export(String sheetName, List<Map<String, Object>> rows) {
-        return export(sheetName, rows, List.of());
+        Map<String, String> headers = inventoryHeaders(sheetName);
+        if (headers.isEmpty()) return export(sheetName, rows, List.of());
+        List<Map<String, Object>> localized = new ArrayList<>();
+        for (Map<String, Object> source : rows) {
+            Map<String, Object> mapped = new LinkedHashMap<>();
+            headers.forEach((key, label) -> {
+                Object value = source.get(key);
+                if (value != null && ("flowType".equals(key) || "bizType".equals(key)))
+                    value = InventoryMovementType.labelForCode(String.valueOf(value));
+                mapped.put(label, value);
+            });
+            localized.add(mapped);
+        }
+        return export(sheetName, localized, new ArrayList<>(headers.values()));
+    }
+
+    private Map<String, String> inventoryHeaders(String sheetName) {
+        Map<String, String> headers = new LinkedHashMap<>();
+        if (!Set.of("inventories", "inventory-batches", "inventory-flows").contains(sheetName)) return headers;
+        headers.put("warehouseName", "仓库"); headers.put("productName", "商品");
+        headers.put("spec", "规格"); headers.put("categoryName", "分类"); headers.put("unitName", "基础单位");
+        switch (sheetName) {
+            case "inventories" -> {
+                headers.put("totalQty", "总基础数量"); headers.put("availableQty", "可用基础数量");
+                headers.put("lockedQty", "锁定基础数量");
+            }
+            case "inventory-batches" -> {
+                headers.put("batchNo", "批次号"); headers.put("inboundTime", "入库时间");
+                headers.put("productionDate", "生产日期"); headers.put("expiryDate", "过期日期");
+                headers.put("unitPrice", "基础单位进价"); headers.put("initQty", "初始基础数量");
+                headers.put("remainQty", "剩余基础数量");
+            }
+            case "inventory-flows" -> {
+                headers.put("flowType", "流水类型"); headers.put("bizType", "业务类型");
+                headers.put("bizId", "业务单据编号"); headers.put("changeQty", "变动基础数量");
+                headers.put("afterQty", "变动后基础数量"); headers.put("bizTime", "业务时间");
+                headers.put("remark", "备注");
+            }
+            default -> throw new IllegalArgumentException(sheetName);
+        }
+        return headers;
     }
 
     private byte[] export(String sheetName, List<Map<String, Object>> rows, List<String> emptyHeaders) {
