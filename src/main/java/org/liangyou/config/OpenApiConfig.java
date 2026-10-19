@@ -71,7 +71,7 @@ public class OpenApiConfig {
         return new OpenAPI()
                 .info(new Info()
                         .title("粮油管理系统 API（Liangyou Demo API）")
-                        .version("v1.0.0")
+                        .version("v1.1.0")
                         .description(COMMON_DESCRIPTION)
                         .license(new License().name("Internal Use Only")))
                 .addSecurityItem(securityRequirement)
@@ -161,6 +161,14 @@ public class OpenApiConfig {
         return GroupedOpenApi.builder()
                 .group("库存（Inventory）")
                 .pathsToMatch("/api/v1/inventories/**")
+                .build();
+    }
+
+    @Bean
+    public GroupedOpenApi basicDataGroup() {
+        return GroupedOpenApi.builder()
+                .group("基础资料（Basic）")
+                .pathsToMatch("/api/v1/basic/**")
                 .build();
     }
 

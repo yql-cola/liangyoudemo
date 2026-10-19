@@ -13,7 +13,7 @@
 
     <groupId>org.liangyou</groupId>
     <artifactId>liangyoudemo</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.1.0-SNAPSHOT</version>
     <name>liangyoudemo</name>
     <description>Backend skeleton for grain and oil inventory management</description>
 
@@ -39,6 +39,12 @@
     </dependencyManagement>
 
     <dependencies>
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <version>2.2.220</version>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>

@@ -36,7 +36,7 @@ public class SaleOutController {
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "修改销售出库单", description = "回滚旧出库影响后按新请求重建销售单和扣减明细。权限点：sale:order:update")
+    @Operation(summary = "修改销售出库单", description = "保留原单据 ID 和单号，回滚旧明细影响后更新销售单和扣减明细。权限点：sale:order:update")
     public ApiResponse<Void> update(@PathVariable Long id, @Valid @RequestBody SaleOutCreateRequest request) {
         saleOutService.update(id, request);
         return ApiResponse.success(null);

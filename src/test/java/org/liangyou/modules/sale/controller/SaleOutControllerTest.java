@@ -25,7 +25,7 @@ class SaleOutControllerTest {
 
     @Test
     void createSaleOutReturnsDocumentId() throws Exception {
-        SaleOutService saleOutService = new SaleOutService(null, null, null, null, null, null) {
+        SaleOutService saleOutService = new SaleOutService(null, null, null, null, null, null, null) {
             @Override
             public Long create(SaleOutCreateRequest request) {
                 return 300L;
@@ -58,7 +58,7 @@ class SaleOutControllerTest {
 
     @Test
     void updateSaleOutReturnsSuccess() throws Exception {
-        SaleOutService saleOutService = new SaleOutService(null, null, null, null, null, null) {
+        SaleOutService saleOutService = new SaleOutService(null, null, null, null, null, null, null) {
             @Override
             public void update(Long id, SaleOutCreateRequest request) {
             }
@@ -90,7 +90,7 @@ class SaleOutControllerTest {
 
     @Test
     void detailReturnsMasterDataNames() throws Exception {
-        SaleOutService saleOutService = new SaleOutService(null, null, null, null, null, null) {
+        SaleOutService saleOutService = new SaleOutService(null, null, null, null, null, null, null) {
             @Override
             public org.liangyou.modules.sale.vo.SaleOutDetailResponse detail(Long id) {
                 org.liangyou.modules.sale.vo.SaleOutDetailResponse response =

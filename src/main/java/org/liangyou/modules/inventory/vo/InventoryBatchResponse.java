@@ -17,6 +17,13 @@ public class InventoryBatchResponse {
     private Long warehouseId;
     @Schema(description = "商品 ID", example = "1001")
     private Long productId;
+    private String warehouseName;
+    private String productName;
+    private String spec;
+    private Long categoryId;
+    private String categoryName;
+    private Long unitId;
+    private String unitName;
     @Schema(description = "批次号", example = "B20260416001")
     private String batchNo;
     @Schema(description = "入库时间", example = "2026-04-16T10:00:00")

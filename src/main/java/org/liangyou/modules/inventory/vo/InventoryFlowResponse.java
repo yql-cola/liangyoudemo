@@ -16,6 +16,13 @@ public class InventoryFlowResponse {
     private Long warehouseId;
     @Schema(description = "商品 ID", example = "1001")
     private Long productId;
+    private String warehouseName;
+    private String productName;
+    private String spec;
+    private Long categoryId;
+    private String categoryName;
+    private Long unitId;
+    private String unitName;
     @Schema(description = "批次 ID", example = "10")
     private Long batchId;
     @Schema(description = "流水类型", example = "purchase_in")

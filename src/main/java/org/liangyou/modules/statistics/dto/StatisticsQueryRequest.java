@@ -4,10 +4,18 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Data
 @Schema(description = "统计查询参数")
 public class StatisticsQueryRequest {
+
+    private Long productId;
+    private Long categoryId;
+    private String groupBy = "day";
+    private String dimension = "product";
+    @Schema(hidden = true)
+    private List<Long> categoryIds;
 
     @Schema(description = "仓库 ID", example = "1")
     private Long warehouseId;

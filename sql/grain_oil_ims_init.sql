@@ -118,6 +118,7 @@ CREATE TABLE base_product_category (
     updated_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     deleted TINYINT NOT NULL DEFAULT 0,
     version INT NOT NULL DEFAULT 0,
+    UNIQUE KEY uk_category_parent_name (parent_id, category_name),
     KEY idx_parent_id (parent_id)
 ) COMMENT='商品分类表';
 
@@ -249,6 +250,7 @@ CREATE TABLE biz_purchase_in_item (
     product_id BIGINT NOT NULL COMMENT '商品ID',
     unit_id BIGINT NOT NULL COMMENT '单位ID',
     qty DECIMAL(18,4) NOT NULL COMMENT '数量',
+    base_qty DECIMAL(18,4) NULL COMMENT '保存时基础单位数量快照',
     unit_price DECIMAL(18,4) NOT NULL COMMENT '单价',
     amount DECIMAL(18,2) NOT NULL COMMENT '金额',
     batch_no VARCHAR(64) NOT NULL COMMENT '批次号',
@@ -291,6 +293,7 @@ CREATE TABLE biz_sale_out_item (
     product_id BIGINT NOT NULL COMMENT '商品ID',
     unit_id BIGINT NOT NULL COMMENT '单位ID',
     qty DECIMAL(18,4) NOT NULL COMMENT '数量',
+    base_qty DECIMAL(18,4) NULL COMMENT '保存时基础单位数量快照',
     unit_price DECIMAL(18,4) NOT NULL COMMENT '销售单价',
     amount DECIMAL(18,2) NOT NULL COMMENT '金额',
     remark VARCHAR(255) DEFAULT NULL,
@@ -444,15 +447,6 @@ CREATE TABLE stat_monthly_summary (
     KEY idx_monthly_customer_month (customer_id, stat_month),
     KEY idx_monthly_supplier_month (supplier_id, stat_month)
 ) COMMENT='月统计汇总表';
-
-ALTER TABLE sys_user_role
-    ADD COLUMN deleted TINYINT NOT NULL DEFAULT 0 AFTER created_time;
-
-ALTER TABLE sys_role_permission
-    ADD COLUMN deleted TINYINT NOT NULL DEFAULT 0 AFTER created_time;
-
-ALTER TABLE sys_user_permission
-    ADD COLUMN deleted TINYINT NOT NULL DEFAULT 0 AFTER created_time;
 
 
 INSERT INTO sys_role (role_code, role_name, status, remark, deleted, version)

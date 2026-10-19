@@ -15,4 +15,5 @@ public class InventoryQueryRequest {
     private Long warehouseId;
     @Schema(description = "商品 ID", example = "1001")
     private Long productId;
+    private Long categoryId;
 }

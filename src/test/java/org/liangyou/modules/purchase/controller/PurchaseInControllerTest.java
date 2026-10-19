@@ -26,7 +26,7 @@ class PurchaseInControllerTest {
 
     @Test
     void createPurchaseInReturnsDocumentId() throws Exception {
-        PurchaseInService purchaseInService = new PurchaseInService(null, null, null, null, null) {
+        PurchaseInService purchaseInService = new PurchaseInService(null, null, null, null, null, null, null) {
             @Override
             public Long create(PurchaseInCreateRequest request) {
                 return 200L;
@@ -63,7 +63,7 @@ class PurchaseInControllerTest {
 
     @Test
     void updatePurchaseInReturnsSuccess() throws Exception {
-        PurchaseInService purchaseInService = new PurchaseInService(null, null, null, null, null) {
+        PurchaseInService purchaseInService = new PurchaseInService(null, null, null, null, null, null, null) {
             @Override
             public void update(Long id, PurchaseInCreateRequest request) {
             }
@@ -97,7 +97,7 @@ class PurchaseInControllerTest {
 
     @Test
     void detailReturnsMasterDataNames() throws Exception {
-        PurchaseInService purchaseInService = new PurchaseInService(null, null, null, null, null) {
+        PurchaseInService purchaseInService = new PurchaseInService(null, null, null, null, null, null, null) {
             @Override
             public org.liangyou.modules.purchase.vo.PurchaseInDetailResponse detail(Long id) {
                 org.liangyou.modules.purchase.vo.PurchaseInDetailResponse response =

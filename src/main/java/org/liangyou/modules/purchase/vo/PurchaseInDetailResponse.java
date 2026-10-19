@@ -50,6 +50,10 @@ public class PurchaseInDetailResponse {
         private String unitName;
         @Schema(description = "数量", example = "100")
         private BigDecimal qty;
+        private BigDecimal baseQty;
+        private String spec;
+        private Long categoryId;
+        private String categoryName;
         @Schema(description = "单价", example = "120.50")
         private BigDecimal unitPrice;
         @Schema(description = "金额", example = "12050.00")

@@ -16,6 +16,8 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springdoc.core.models.GroupedOpenApi;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.liangyou.modules.user.service.DevAdminAccountInitializer;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -25,6 +27,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ActiveProfiles("dev")
 class LiangyouDemoApplicationTests {
+
+    // A context/contract test must never initialize accounts in a developer database.
+    @MockBean
+    private DevAdminAccountInitializer devAdminAccountInitializer;
 
     @Autowired
     private Environment environment;
@@ -70,19 +76,14 @@ class LiangyouDemoApplicationTests {
 
     @Test
     void openApiGroupsIncludeAlignedControllers() {
-        Set<String> groupNames = groupedOpenApis.stream()
-                .map(GroupedOpenApi::getGroup)
+        Set<String> groupPaths = groupedOpenApis.stream()
+                .flatMap(group -> group.getPathsToMatch().stream())
                 .collect(Collectors.toSet());
 
-        Assertions.assertTrue(groupNames.containsAll(Set.of(
-                "Auth",
-                "User",
-                "Role",
-                "Menu",
-                "Purchase",
-                "Sale",
-                "Inventory",
-                "Statistics"
+        Assertions.assertTrue(groupPaths.containsAll(Set.of(
+                "/api/v1/auth/**", "/api/v1/users/**", "/api/v1/roles/**",
+                "/api/v1/menus/**", "/api/v1/purchase-ins/**", "/api/v1/sale-outs/**",
+                "/api/v1/inventories/**", "/api/v1/statistics/**"
         )));
     }
 

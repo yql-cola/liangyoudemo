@@ -1,5 +1,7 @@
 # Basic Data and Statistics Upgrade Implementation Plan
 
+> 2026-10-18 执行状态：本计划对应的代码已在实际项目目录接续实现。模块验收、修复记录和验证证据见 [恢复与交付记录](2026-10-17-business-closure-progress.md)，数据库升级与业务验收见 [v1.1.0 交付说明](../../releases/2026-10-18-v1.1.0.md)。下文保留最初实施步骤及预期，不作为当前执行状态；历史红灯步骤以本次真实回归记录为准。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Build the confirmed enterprise-grade basic-data backend and frontend, then upgrade business pages and statistics pages to use real master data, chart switching, and Excel export.

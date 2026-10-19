@@ -49,6 +49,10 @@ public class SaleOutDetailResponse {
         private String unitName;
         @Schema(description = "数量", example = "20")
         private BigDecimal qty;
+        private BigDecimal baseQty;
+        private String spec;
+        private Long categoryId;
+        private String categoryName;
         @Schema(description = "销售单价", example = "150.00")
         private BigDecimal unitPrice;
         @Schema(description = "金额", example = "3000.00")

@@ -19,7 +19,7 @@ class StatisticsControllerTest {
 
     @Test
     void monthlyInboundOutboundEndpointExists() throws Exception {
-        StatisticsService statisticsService = new StatisticsService(null, null, null, null, null, null, null) {
+        StatisticsService statisticsService = new StatisticsService(null) {
             @Override
             public List<AmountSummaryResponse> monthlyInboundOutbound(StatisticsQueryRequest request) {
                 return List.of();
@@ -36,7 +36,7 @@ class StatisticsControllerTest {
     @Test
     void oldMonthlyAmountSummaryRouteDoesNotInvokeService() throws Exception {
         boolean[] called = new boolean[1];
-        StatisticsService statisticsService = new StatisticsService(null, null, null, null, null, null, null) {
+        StatisticsService statisticsService = new StatisticsService(null) {
             @Override
             public List<AmountSummaryResponse> monthlyInboundOutbound(StatisticsQueryRequest request) {
                 called[0] = true;
@@ -54,7 +54,7 @@ class StatisticsControllerTest {
 
     @Test
     void dailyStatisticsEndpointExists() throws Exception {
-        StatisticsService statisticsService = new StatisticsService(null, null, null, null, null, null, null) {
+        StatisticsService statisticsService = new StatisticsService(null) {
             @Override
             public List<DailyInboundOutboundResponse> dailyInboundOutbound(StatisticsQueryRequest request) {
                 return List.of();
@@ -70,7 +70,7 @@ class StatisticsControllerTest {
 
     @Test
     void amountByCategoryEndpointExists() throws Exception {
-        StatisticsService statisticsService = new StatisticsService(null, null, null, null, null, null, null) {
+        StatisticsService statisticsService = new StatisticsService(null) {
             @Override
             public List<AmountSummaryResponse> amountByCategory(StatisticsQueryRequest request) {
                 return List.of();
@@ -86,7 +86,7 @@ class StatisticsControllerTest {
 
     @Test
     void scenarioStatisticsEndpointsExist() throws Exception {
-        StatisticsService statisticsService = new StatisticsService(null, null, null, null, null, null, null) {
+        StatisticsService statisticsService = new StatisticsService(null) {
             @Override public ScenarioStatisticsResponse dashboard(StatisticsQueryRequest request) { return new ScenarioStatisticsResponse(); }
             @Override public ScenarioStatisticsResponse trends(StatisticsQueryRequest request) { return new ScenarioStatisticsResponse(); }
             @Override public ScenarioStatisticsResponse saleProducts(StatisticsQueryRequest request) { return new ScenarioStatisticsResponse(); }
@@ -116,7 +116,13 @@ class StatisticsControllerTest {
 
     @Test
     void scenarioStatisticsExportEndpointsExist() throws Exception {
-        StatisticsService statisticsService = new StatisticsService(null, null, null, null, null, null, null);
+        StatisticsService statisticsService = new StatisticsService(null) {
+            @Override public byte[] exportScenario(String scenario, StatisticsQueryRequest request) {
+                org.junit.jupiter.api.Assertions.assertEquals("2026-10-01", request.getDateFrom().toString());
+                return new org.liangyou.modules.basic.service.ExcelExportService().export(scenario,
+                        List.of(java.util.Map.of("名称", "大米", "金额", 100)));
+            }
+        };
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(new StatisticsController(statisticsService))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
@@ -130,7 +136,7 @@ class StatisticsControllerTest {
                 "/api/v1/statistics/customer-ranks/export",
                 "/api/v1/statistics/supplier-ranks/export",
                 "/api/v1/statistics/category-shares/export")) {
-            mockMvc.perform(get(path))
+            mockMvc.perform(get(path).param("dateFrom", "2026-10-01"))
                     .andExpect(status().isOk());
         }
     }

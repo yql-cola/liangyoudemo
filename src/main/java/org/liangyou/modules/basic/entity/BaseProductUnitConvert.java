@@ -1,6 +1,7 @@
 package org.liangyou.modules.basic.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
@@ -28,4 +29,10 @@ public class BaseProductUnitConvert {
     @TableLogic
     private Integer deleted;
     private Integer version;
+    @TableField(exist = false)
+    private String productName;
+    @TableField(exist = false)
+    private String fromUnitName;
+    @TableField(exist = false)
+    private String toUnitName;
 }

@@ -87,15 +87,17 @@ public class StatisticsController {
             "/category-shares/export"
     })
     @Operation(summary = "导出统计报表")
-    public ResponseEntity<byte[]> export() {
+    public ResponseEntity<byte[]> export(jakarta.servlet.http.HttpServletRequest http, StatisticsQueryRequest request) {
+        String scenario = http.getRequestURI().substring(http.getContextPath().length() + "/api/v1/statistics/".length());
+        scenario = scenario.substring(0, scenario.length() - "/export".length());
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"statistics.xlsx\"")
-                .body(new byte[]{'P', 'K'});
+                .body(statisticsService.exportScenario(scenario, request));
     }
 
     @GetMapping("/daily/inbound-outbound")
-    @Operation(summary = "按日查询进出货统计", description = "优先读取日汇总表，无数据时回退实时聚合。权限点：statistics:daily:view")
+    @Operation(summary = "按日查询进出货统计", description = "按有效业务单据实时聚合金额与基础数量。权限点：statistics:daily:view")
     public ApiResponse<List<DailyInboundOutboundResponse>> dailyInboundOutbound(StatisticsQueryRequest request) {
         return ApiResponse.success(statisticsService.dailyInboundOutbound(request));
     }

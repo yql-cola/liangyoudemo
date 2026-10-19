@@ -19,6 +19,8 @@ public class BizSaleOutItem {
     private Long productId;
     private Long unitId;
     private BigDecimal qty;
+    /** Quantity in the product base unit, fixed when the document is saved. */
+    private BigDecimal baseQty;
     private BigDecimal unitPrice;
     private BigDecimal amount;
     private String remark;

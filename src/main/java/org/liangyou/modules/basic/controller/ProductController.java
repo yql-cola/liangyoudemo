@@ -42,13 +42,13 @@ public class ProductController {
 
     @GetMapping
     @Operation(summary = "分页查询商品", description = "权限点：basic:product:list")
-    public ApiResponse<PageResponse<ProductResponse>> query(ProductQueryRequest request) {
+    public ApiResponse<PageResponse<ProductResponse>> query(@Valid ProductQueryRequest request) {
         return ApiResponse.success(basicDataService.queryProducts(request));
     }
 
     @GetMapping("/{id}")
     @Operation(summary = "查询商品详情", description = "权限点：basic:product:view")
-    public ApiResponse<ProductResponse> detail(@PathVariable Long id) {
+    public ApiResponse<ProductResponse> detail(@PathVariable("id") Long id) {
         return ApiResponse.success(basicDataService.productDetail(id));
     }
 
@@ -60,20 +60,20 @@ public class ProductController {
 
     @PutMapping("/{id}")
     @Operation(summary = "修改商品", description = "权限点：basic:product:update")
-    public ApiResponse<ProductResponse> update(@PathVariable Long id, @Valid @RequestBody ProductSaveRequest request) {
+    public ApiResponse<ProductResponse> update(@PathVariable("id") Long id, @Valid @RequestBody ProductSaveRequest request) {
         return ApiResponse.success(basicDataService.updateProduct(id, request));
     }
 
     @DeleteMapping("/{id}")
     @Operation(summary = "删除商品", description = "权限点：basic:product:delete")
-    public ApiResponse<Void> delete(@PathVariable Long id) {
+    public ApiResponse<Void> delete(@PathVariable("id") Long id) {
         basicDataService.deleteProduct(id);
         return ApiResponse.success(null);
     }
 
     @PatchMapping("/{id}/status")
     @Operation(summary = "启停用商品", description = "权限点：basic:product:status")
-    public ApiResponse<Void> updateStatus(@PathVariable Long id, @Valid @RequestBody StatusUpdateRequest request) {
+    public ApiResponse<Void> updateStatus(@PathVariable("id") Long id, @Valid @RequestBody StatusUpdateRequest request) {
         basicDataService.updateProductStatus(id, request);
         return ApiResponse.success(null);
     }
@@ -84,9 +84,15 @@ public class ProductController {
         return ApiResponse.success(basicDataService.productOptions(keyword));
     }
 
+    @GetMapping("/{id}/units")
+    @Operation(summary = "查询商品可用单位及到基础单位的换算倍率")
+    public ApiResponse<List<BasicOptionResponse>> units(@PathVariable("id") Long id) {
+        return ApiResponse.success(basicDataService.productUnitOptions(id));
+    }
+
     @GetMapping("/export")
     @Operation(summary = "导出商品", description = "权限点：basic:product:export")
-    public ResponseEntity<byte[]> export(ProductQueryRequest request) {
+    public ResponseEntity<byte[]> export(@Valid ProductQueryRequest request) {
         byte[] bytes = excelExportService.exportProducts(request);
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))

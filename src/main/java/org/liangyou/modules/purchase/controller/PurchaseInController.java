@@ -36,7 +36,7 @@ public class PurchaseInController {
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "修改采购入库单", description = "回滚旧入库影响后按新请求重建采购单、库存和批次。权限点：purchase:order:update")
+    @Operation(summary = "修改采购入库单", description = "保留原单据 ID 和单号，回滚旧明细影响后更新采购单、库存和批次。权限点：purchase:order:update")
     public ApiResponse<Void> update(@PathVariable Long id, @Valid @RequestBody PurchaseInCreateRequest request) {
         purchaseInService.update(id, request);
         return ApiResponse.success(null);

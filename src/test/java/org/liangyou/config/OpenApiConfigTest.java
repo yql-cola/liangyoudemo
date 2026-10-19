@@ -14,6 +14,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class OpenApiConfigTest {
 
     @Test
+    void basicDataIsVisibleInApiDocumentation() {
+        OpenApiConfig config = new OpenApiConfig(new SwaggerGlobalHeaderProperties());
+        assertEquals(List.of("/api/v1/basic/**"), config.basicDataGroup().getPathsToMatch());
+    }
+
+    @Test
     void openApiAddsConfiguredGlobalHeaderSchemes() {
         SwaggerGlobalHeaderProperties properties = new SwaggerGlobalHeaderProperties();
         properties.setGlobalHeaders(List.of("X-Tenant-Id", "X-Trace-Id"));

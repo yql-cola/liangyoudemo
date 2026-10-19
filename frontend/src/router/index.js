@@ -130,39 +130,22 @@ export const constantRoutes = [
   {
     path: '/statistics',
     component: Layout,
-    redirect: '/statistics/daily',
-    meta: { title: '统计报表', icon: 'el-icon-data-analysis' },
+    redirect: '/statistics/dashboard',
+    meta: { title: '统计分析', icon: 'el-icon-data-analysis' },
     children: [
-      {
-        path: 'daily',
-        name: 'StatisticsDaily',
-        component: () => import('@/views/statistics/daily'),
-        meta: { title: '日进销统计', permission: 'statistics:daily:view' }
-      },
-      {
-        path: 'monthly',
-        name: 'StatisticsMonthly',
-        component: () => import('@/views/statistics/monthly'),
-        meta: { title: '月进销统计', permission: 'statistics:monthly:view' }
-      },
-      {
-        path: 'customer',
-        name: 'StatisticsCustomer',
-        component: () => import('@/views/statistics/customer'),
-        meta: { title: '客户销售统计', permission: 'statistics:customer:view' }
-      },
-      {
-        path: 'supplier',
-        name: 'StatisticsSupplier',
-        component: () => import('@/views/statistics/supplier'),
-        meta: { title: '供应商采购统计', permission: 'statistics:supplier:view' }
-      },
-      {
-        path: 'category',
-        name: 'StatisticsCategory',
-        component: () => import('@/views/statistics/category'),
-        meta: { title: '分类金额统计', permission: 'statistics:category:view' }
-      }
+      ...[
+        ['dashboard', '经营看板'], ['trend', '进销趋势分析'], ['sale-product', '商品销售分析'],
+        ['purchase-product', '商品采购分析'], ['inventory-structure', '库存结构分析'],
+        ['customer-rank', '客户销售排行'], ['supplier-rank', '供应商采购排行'], ['category-share', '分类占比分析']
+      ].map(([path, title]) => ({
+        path, name: `Statistics-${path}`, component: () => import('@/views/statistics/ScenarioPage'),
+        props: { scenario: path }, meta: { title, permission: `statistics:${path}:view` }
+      })),
+      { path: 'daily', redirect: 'trend', hidden: true },
+      { path: 'monthly', redirect: { path: '/statistics/trend', query: { groupBy: 'month' } }, hidden: true },
+      { path: 'customer', redirect: 'customer-rank', hidden: true },
+      { path: 'supplier', redirect: 'supplier-rank', hidden: true },
+      { path: 'category', redirect: 'category-share', hidden: true }
     ]
   },
   {
@@ -171,11 +154,12 @@ export const constantRoutes = [
     redirect: '/basic/product',
     meta: { title: '基础资料', icon: 'el-icon-folder' },
     children: [
-      { path: 'product', name: 'BasicProduct', component: () => import('@/views/basic/placeholder'), meta: { title: '商品管理' } },
-      { path: 'warehouse', name: 'BasicWarehouse', component: () => import('@/views/basic/placeholder'), meta: { title: '仓库管理' } },
-      { path: 'supplier', name: 'BasicSupplier', component: () => import('@/views/basic/placeholder'), meta: { title: '供应商管理' } },
-      { path: 'customer', name: 'BasicCustomer', component: () => import('@/views/basic/placeholder'), meta: { title: '客户管理' } }
-    ]
+      ['product', '商品管理'], ['category', '商品分类'], ['unit', '单位管理'],
+      ['unit-convert', '商品单位换算'], ['warehouse', '仓库管理'], ['supplier', '供应商管理'], ['customer', '客户管理']
+    ].map(([path, title]) => ({
+      path, name: `Basic-${path}`, component: () => import(`@/views/basic/${path}.vue`),
+      meta: { title, permission: `basic:${path}:list` }
+    }))
   },
   { path: '*', redirect: '/404', hidden: true }
 ]

@@ -13,6 +13,7 @@ public class InventoryFlowQueryRequest {
     private Long warehouseId;
     @Schema(description = "商品 ID", example = "1001")
     private Long productId;
+    private Long categoryId;
     @Schema(description = "业务开始时间", example = "2026-04-01T00:00:00")
     private LocalDateTime bizTimeFrom;
     @Schema(description = "业务结束时间", example = "2026-04-30T23:59:59")

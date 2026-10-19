@@ -19,7 +19,7 @@ class InventoryControllerTest {
 
     @Test
     void listInventoryEndpointExists() throws Exception {
-        InventoryService inventoryService = new InventoryService(null, null, null) {
+        InventoryService inventoryService = new InventoryService(null, null, null, null, null, null, null) {
             @Override
             public PageResponse<InventoryResponse> query(InventoryQueryRequest request) {
                 return new PageResponse<>(List.of(), 0);
@@ -37,7 +37,7 @@ class InventoryControllerTest {
     void batchesEndpointForwardsWarehouseAndProduct() throws Exception {
         long[] capturedWarehouseId = new long[1];
         long[] capturedProductId = new long[1];
-        InventoryService inventoryService = new InventoryService(null, null, null) {
+        InventoryService inventoryService = new InventoryService(null, null, null, null, null, null, null) {
             @Override
             public List<InventoryBatchResponse> batches(Long warehouseId, Long productId) {
                 capturedWarehouseId[0] = warehouseId == null ? -1 : warehouseId;
@@ -56,11 +56,11 @@ class InventoryControllerTest {
     }
 
     @Test
-    void oldBatchesRouteDoesNotInvokeService() throws Exception {
+    void collectionBatchesRouteSupportsOptionalProduct() throws Exception {
         boolean[] called = new boolean[1];
-        InventoryService inventoryService = new InventoryService(null, null, null) {
+        InventoryService inventoryService = new InventoryService(null, null, null, null, null, null, null) {
             @Override
-            public List<InventoryBatchResponse> batches(Long warehouseId, Long productId) {
+            public List<InventoryBatchResponse> batches(Long warehouseId, Long productId, Long categoryId) {
                 called[0] = true;
                 return List.of();
             }
@@ -70,7 +70,7 @@ class InventoryControllerTest {
                 .build();
 
         mockMvc.perform(get("/api/v1/inventories/batches").param("warehouseId", "7").param("productId", "42"))
-                .andExpect(status().is4xxClientError());
-        org.junit.jupiter.api.Assertions.assertFalse(called[0]);
+                .andExpect(status().isOk());
+        org.junit.jupiter.api.Assertions.assertTrue(called[0]);
     }
 }

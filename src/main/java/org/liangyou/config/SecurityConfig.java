@@ -3,6 +3,7 @@ package org.liangyou.config;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.liangyou.common.api.ApiResponse;
 import org.liangyou.security.JwtAuthenticationFilter;
+import org.liangyou.security.ResourcePermissionAuthorizationManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.MediaType;
@@ -29,7 +30,13 @@ public class SecurityConfig {
         http
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .exceptionHandling(exceptions -> exceptions.authenticationEntryPoint(unauthorizedEntryPoint(objectMapper)))
+                .exceptionHandling(exceptions -> exceptions
+                        .authenticationEntryPoint(unauthorizedEntryPoint(objectMapper))
+                        .accessDeniedHandler((request, response, exception) -> {
+                            response.setStatus(HttpStatus.FORBIDDEN.value());
+                            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                            objectMapper.writeValue(response.getOutputStream(), ApiResponse.failure(403, "无权限访问"));
+                        }))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/api/v1/auth/login",
@@ -40,6 +47,10 @@ public class SecurityConfig {
                                 "/swagger-ui.html",
                                 "/webjars/**"
                         ).permitAll()
+                        .requestMatchers("/api/v1/basic/**", "/api/v1/statistics/**", "/api/v1/inventories/**",
+                                "/api/v1/purchase-ins/**", "/api/v1/sale-outs/**",
+                                "/api/v1/users/**", "/api/v1/roles/**", "/api/v1/menus/**")
+                        .access(new ResourcePermissionAuthorizationManager())
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

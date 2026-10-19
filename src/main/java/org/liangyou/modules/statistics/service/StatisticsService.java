@@ -1,298 +1,130 @@
 package org.liangyou.modules.statistics.service;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
-import org.liangyou.modules.product.entity.BaseProduct;
-import org.liangyou.modules.product.mapper.BaseProductMapper;
-import org.liangyou.modules.purchase.entity.BizPurchaseInItem;
-import org.liangyou.modules.purchase.entity.BizPurchaseIn;
-import org.liangyou.modules.purchase.mapper.BizPurchaseInItemMapper;
-import org.liangyou.modules.purchase.mapper.BizPurchaseInMapper;
-import org.liangyou.modules.sale.entity.BizSaleOutItem;
-import org.liangyou.modules.sale.entity.BizSaleOut;
-import org.liangyou.modules.sale.mapper.BizSaleOutItemMapper;
-import org.liangyou.modules.sale.mapper.BizSaleOutMapper;
+import org.liangyou.common.exception.BusinessException;
 import org.liangyou.modules.statistics.dto.StatisticsQueryRequest;
-import org.liangyou.modules.statistics.entity.StatDailySummary;
-import org.liangyou.modules.statistics.entity.StatMonthlySummary;
-import org.liangyou.modules.statistics.mapper.StatDailySummaryMapper;
-import org.liangyou.modules.statistics.mapper.StatMonthlySummaryMapper;
 import org.liangyou.modules.statistics.vo.AmountSummaryResponse;
 import org.liangyou.modules.statistics.vo.DailyInboundOutboundResponse;
 import org.liangyou.modules.statistics.vo.ScenarioStatisticsResponse;
+import org.liangyou.modules.statistics.vo.ScenarioStatisticsResponse.Row;
+import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
+import java.time.DateTimeException;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class StatisticsService {
+    private final ScenarioStatisticsService scenarios;
 
-    private final StatDailySummaryMapper statDailySummaryMapper;
-    private final StatMonthlySummaryMapper statMonthlySummaryMapper;
-    private final BizPurchaseInMapper purchaseInMapper;
-    private final BizSaleOutMapper saleOutMapper;
-    private final BizPurchaseInItemMapper purchaseInItemMapper;
-    private final BizSaleOutItemMapper saleOutItemMapper;
-    private final BaseProductMapper baseProductMapper;
+    public byte[] exportScenario(String scenario, StatisticsQueryRequest request) {
+        return scenarios.export(scenario, request);
+    }
 
     public ScenarioStatisticsResponse dashboard(StatisticsQueryRequest request) {
-        return emptyScenario();
+        return scenarios.report("dashboard", request);
     }
 
     public ScenarioStatisticsResponse trends(StatisticsQueryRequest request) {
-        return emptyScenario();
+        return scenarios.report("trends", request);
     }
 
     public ScenarioStatisticsResponse saleProducts(StatisticsQueryRequest request) {
-        return emptyScenario();
+        return scenarios.report("sale-products", request);
     }
 
     public ScenarioStatisticsResponse purchaseProducts(StatisticsQueryRequest request) {
-        return emptyScenario();
+        return scenarios.report("purchase-products", request);
     }
 
     public ScenarioStatisticsResponse inventoryStructure(StatisticsQueryRequest request) {
-        return emptyScenario();
+        return scenarios.report("inventory-structure", request);
     }
 
     public ScenarioStatisticsResponse customerRanks(StatisticsQueryRequest request) {
-        return emptyScenario();
+        return scenarios.report("customer-ranks", request);
     }
 
     public ScenarioStatisticsResponse supplierRanks(StatisticsQueryRequest request) {
-        return emptyScenario();
+        return scenarios.report("supplier-ranks", request);
     }
 
     public ScenarioStatisticsResponse categoryShares(StatisticsQueryRequest request) {
-        return emptyScenario();
+        return scenarios.report("category-shares", request);
     }
 
-    private ScenarioStatisticsResponse emptyScenario() {
-        ScenarioStatisticsResponse response = new ScenarioStatisticsResponse();
-        ScenarioStatisticsResponse.Metric amount = new ScenarioStatisticsResponse.Metric();
-        amount.setKey("amount");
-        amount.setName("金额");
-        amount.setValue(BigDecimal.ZERO);
-        response.setMetrics(List.of(amount));
-        response.setRows(List.of());
-        return response;
-    }
-
+    @Transactional(readOnly = true)
     public List<DailyInboundOutboundResponse> dailyInboundOutbound(StatisticsQueryRequest request) {
-        List<StatDailySummary> summaries = statDailySummaryMapper == null ? List.of() : statDailySummaryMapper.selectList(
-                new LambdaQueryWrapper<StatDailySummary>()
-                        .eq(request.getWarehouseId() != null, StatDailySummary::getWarehouseId, request.getWarehouseId())
-                        .eq(request.getStatType() != null, StatDailySummary::getStatType, request.getStatType())
-                        .ge(request.getDateFrom() != null, StatDailySummary::getStatDate, request.getDateFrom())
-                        .le(request.getDateTo() != null, StatDailySummary::getStatDate, request.getDateTo())
-                        .orderByAsc(StatDailySummary::getStatDate));
-        if (!summaries.isEmpty()) {
-            return summaries.stream().map(this::toDailyResponse).toList();
+        String source = businessSource(request);
+        List<DailyInboundOutboundResponse> result = new ArrayList<>();
+        for (String type : List.of("purchase", "sale")) {
+            if (!"all".equals(source) && !type.equals(source)) continue;
+            for (Row row : scenarios.aggregateBusiness(request, type, "date").getRows()) {
+                DailyInboundOutboundResponse response = new DailyInboundOutboundResponse();
+                response.setStatType(type); response.setStatDate(LocalDate.parse(row.getDimensionId()));
+                response.setTotalAmount(row.getAmount()); response.setTotalQty(row.getQty());
+                result.add(response);
+            }
         }
-
-        List<DailyInboundOutboundResponse> fallback = new ArrayList<>();
-        if (purchaseInMapper != null) {
-            fallback.addAll(purchaseInMapper.selectList(new LambdaQueryWrapper<BizPurchaseIn>()
-                            .eq(request.getWarehouseId() != null, BizPurchaseIn::getWarehouseId, request.getWarehouseId())
-                            .ge(request.getDateFrom() != null, BizPurchaseIn::getBizDate, request.getDateFrom())
-                            .le(request.getDateTo() != null, BizPurchaseIn::getBizDate, request.getDateTo()))
-                    .stream()
-                    .map(item -> toDailyResponse("purchase", item.getBizDate(), item.getTotalAmount()))
-                    .toList());
-        }
-        if (saleOutMapper != null) {
-            fallback.addAll(saleOutMapper.selectList(new LambdaQueryWrapper<BizSaleOut>()
-                            .eq(request.getWarehouseId() != null, BizSaleOut::getWarehouseId, request.getWarehouseId())
-                            .ge(request.getDateFrom() != null, BizSaleOut::getBizDate, request.getDateFrom())
-                            .le(request.getDateTo() != null, BizSaleOut::getBizDate, request.getDateTo()))
-                    .stream()
-                    .map(item -> toDailyResponse("sale", item.getBizDate(), item.getTotalAmount()))
-                    .toList());
-        }
-        fallback.sort(Comparator.comparing(DailyInboundOutboundResponse::getStatDate));
-        return fallback;
+        result.sort(Comparator.comparing(DailyInboundOutboundResponse::getStatDate)
+                .thenComparing(DailyInboundOutboundResponse::getStatType));
+        return result;
     }
 
+    @Transactional(readOnly = true)
     public List<AmountSummaryResponse> monthlyInboundOutbound(StatisticsQueryRequest request) {
-        List<StatMonthlySummary> summaries = statMonthlySummaryMapper == null ? List.of() : statMonthlySummaryMapper.selectList(
-                new LambdaQueryWrapper<StatMonthlySummary>()
-                        .eq(request.getWarehouseId() != null, StatMonthlySummary::getWarehouseId, request.getWarehouseId())
-                        .eq(request.getStatType() != null, StatMonthlySummary::getStatType, request.getStatType())
-                        .ge(request.getMonthFrom() != null, StatMonthlySummary::getStatMonth, request.getMonthFrom())
-                        .le(request.getMonthTo() != null, StatMonthlySummary::getStatMonth, request.getMonthTo())
-                        .orderByAsc(StatMonthlySummary::getStatMonth));
-        return summaries.stream().map(item -> {
-            AmountSummaryResponse response = new AmountSummaryResponse();
-            response.setKey(item.getStatMonth());
-            response.setTotalAmount(item.getTotalAmount());
-            response.setTotalQty(item.getTotalQty());
-            return response;
-        }).toList();
+        StatisticsQueryRequest q = new StatisticsQueryRequest(); BeanUtils.copyProperties(request, q);
+        try {
+            YearMonth from = q.getMonthFrom() == null ? null : YearMonth.parse(q.getMonthFrom());
+            YearMonth to = q.getMonthTo() == null ? null : YearMonth.parse(q.getMonthTo());
+            if (from != null && to != null && from.isAfter(to))
+                throw new BusinessException(400, "statistics-date-range-invalid");
+            if (from != null && (q.getDateFrom() == null || q.getDateFrom().isBefore(from.atDay(1))))
+                q.setDateFrom(from.atDay(1));
+            if (to != null && (q.getDateTo() == null || q.getDateTo().isAfter(to.atEndOfMonth())))
+                q.setDateTo(to.atEndOfMonth());
+        } catch (DateTimeException ex) {
+            throw new BusinessException(400, "statistics-date-range-invalid");
+        }
+        return scenarios.aggregateBusiness(q, businessSource(q), "month").getRows().stream()
+                .sorted(Comparator.comparing(Row::getDimensionId))
+                .map(row -> summary(row.getDimensionId(), row)).toList();
     }
 
     public List<AmountSummaryResponse> amountByCustomer(StatisticsQueryRequest request) {
-        if (statDailySummaryMapper == null) {
-            return List.of();
-        }
-        return statDailySummaryMapper.selectList(new LambdaQueryWrapper<StatDailySummary>()
-                        .isNotNull(StatDailySummary::getCustomerId)
-                        .eq(request.getWarehouseId() != null, StatDailySummary::getWarehouseId, request.getWarehouseId())
-                        .ge(request.getDateFrom() != null, StatDailySummary::getStatDate, request.getDateFrom())
-                        .le(request.getDateTo() != null, StatDailySummary::getStatDate, request.getDateTo()))
-                .stream()
-                .map(item -> toAmountSummary("customer:" + item.getCustomerId(), item.getTotalAmount(), item.getTotalQty()))
-                .toList();
+        return scenarios.aggregateBusiness(request, "sale", "partner").getRows().stream()
+                .map(row -> summary("customer:" + row.getDimensionId(), row)).toList();
     }
 
     public List<AmountSummaryResponse> amountBySupplier(StatisticsQueryRequest request) {
-        if (statDailySummaryMapper == null) {
-            return List.of();
-        }
-        return statDailySummaryMapper.selectList(new LambdaQueryWrapper<StatDailySummary>()
-                        .isNotNull(StatDailySummary::getSupplierId)
-                        .eq(request.getWarehouseId() != null, StatDailySummary::getWarehouseId, request.getWarehouseId())
-                        .ge(request.getDateFrom() != null, StatDailySummary::getStatDate, request.getDateFrom())
-                        .le(request.getDateTo() != null, StatDailySummary::getStatDate, request.getDateTo()))
-                .stream()
-                .map(item -> toAmountSummary("supplier:" + item.getSupplierId(), item.getTotalAmount(), item.getTotalQty()))
-                .toList();
+        return scenarios.aggregateBusiness(request, "purchase", "partner").getRows().stream()
+                .map(row -> summary("supplier:" + row.getDimensionId(), row)).toList();
     }
 
     public List<AmountSummaryResponse> amountByCategory(StatisticsQueryRequest request) {
-        if (statDailySummaryMapper == null) {
-            return fallbackAmountByCategory(request);
-        }
-        List<AmountSummaryResponse> summaries = statDailySummaryMapper.selectList(new LambdaQueryWrapper<StatDailySummary>()
-                        .isNotNull(StatDailySummary::getProductCategoryId)
-                        .eq(request.getWarehouseId() != null, StatDailySummary::getWarehouseId, request.getWarehouseId())
-                        .eq(request.getStatType() != null, StatDailySummary::getStatType, request.getStatType())
-                        .ge(request.getDateFrom() != null, StatDailySummary::getStatDate, request.getDateFrom())
-                        .le(request.getDateTo() != null, StatDailySummary::getStatDate, request.getDateTo()))
-                .stream()
-                .map(item -> toAmountSummary("category:" + item.getProductCategoryId(), item.getTotalAmount(), item.getTotalQty()))
-                .toList();
-        if (!summaries.isEmpty()) {
-            return summaries;
-        }
-        return fallbackAmountByCategory(request);
+        List<Row> rows = "inventory".equals(request.getStatType())
+                ? scenarios.report("category-shares", request).getRows()
+                : scenarios.aggregateBusiness(request, businessSource(request), "category").getRows();
+        return rows.stream().map(row -> summary("category:" + row.getDimensionId(), row)).toList();
     }
 
-    private DailyInboundOutboundResponse toDailyResponse(StatDailySummary summary) {
-        DailyInboundOutboundResponse response = new DailyInboundOutboundResponse();
-        response.setStatType(summary.getStatType());
-        response.setStatDate(summary.getStatDate());
-        response.setTotalQty(summary.getTotalQty());
-        response.setTotalAmount(summary.getTotalAmount());
-        return response;
+    private String businessSource(StatisticsQueryRequest q) {
+        if (q.getStatType() == null) return "all";
+        if (!Set.of("purchase", "sale", "all").contains(q.getStatType()))
+            throw new BusinessException(400, "statistics-dimension-invalid");
+        return q.getStatType();
     }
 
-    private DailyInboundOutboundResponse toDailyResponse(String statType, LocalDate statDate, BigDecimal totalAmount) {
-        DailyInboundOutboundResponse response = new DailyInboundOutboundResponse();
-        response.setStatType(statType);
-        response.setStatDate(statDate);
-        response.setTotalQty(BigDecimal.ZERO);
-        response.setTotalAmount(totalAmount);
-        return response;
-    }
-
-    private AmountSummaryResponse toAmountSummary(String key, BigDecimal totalAmount, BigDecimal totalQty) {
+    private AmountSummaryResponse summary(String key, Row row) {
         AmountSummaryResponse response = new AmountSummaryResponse();
-        response.setKey(key);
-        response.setTotalAmount(totalAmount);
-        response.setTotalQty(totalQty);
+        response.setKey(key); response.setTotalAmount(row.getAmount()); response.setTotalQty(row.getQty());
         return response;
-    }
-
-    private List<AmountSummaryResponse> fallbackAmountByCategory(StatisticsQueryRequest request) {
-        Map<Long, AmountSummaryResponse> categorySummary = new LinkedHashMap<>();
-        if (request.getStatType() == null || "purchase".equals(request.getStatType())) {
-            accumulatePurchaseCategorySummary(request, categorySummary);
-        }
-        if (request.getStatType() == null || "sale".equals(request.getStatType())) {
-            accumulateSaleCategorySummary(request, categorySummary);
-        }
-        return List.copyOf(categorySummary.values());
-    }
-
-    private void accumulatePurchaseCategorySummary(StatisticsQueryRequest request,
-                                                   Map<Long, AmountSummaryResponse> categorySummary) {
-        if (purchaseInMapper == null || purchaseInItemMapper == null || baseProductMapper == null) {
-            return;
-        }
-        List<BizPurchaseIn> orders = purchaseInMapper.selectList(new LambdaQueryWrapper<BizPurchaseIn>()
-                .eq(request.getWarehouseId() != null, BizPurchaseIn::getWarehouseId, request.getWarehouseId())
-                .ge(request.getDateFrom() != null, BizPurchaseIn::getBizDate, request.getDateFrom())
-                .le(request.getDateTo() != null, BizPurchaseIn::getBizDate, request.getDateTo()));
-        if (orders.isEmpty()) {
-            return;
-        }
-        Set<Long> orderIds = orders.stream().map(BizPurchaseIn::getId).collect(Collectors.toSet());
-        List<BizPurchaseInItem> items = purchaseInItemMapper.selectList(new LambdaQueryWrapper<BizPurchaseInItem>()
-                .in(BizPurchaseInItem::getPurchaseInId, orderIds));
-        Map<Long, Long> productCategoryMap = loadProductCategoryMap(items.stream()
-                .map(BizPurchaseInItem::getProductId)
-                .collect(Collectors.toSet()));
-        for (BizPurchaseInItem item : items) {
-            Long categoryId = productCategoryMap.get(item.getProductId());
-            if (categoryId == null) {
-                continue;
-            }
-            mergeCategorySummary(categorySummary, categoryId, item.getAmount(), item.getQty());
-        }
-    }
-
-    private void accumulateSaleCategorySummary(StatisticsQueryRequest request,
-                                               Map<Long, AmountSummaryResponse> categorySummary) {
-        if (saleOutMapper == null || saleOutItemMapper == null || baseProductMapper == null) {
-            return;
-        }
-        List<BizSaleOut> orders = saleOutMapper.selectList(new LambdaQueryWrapper<BizSaleOut>()
-                .eq(request.getWarehouseId() != null, BizSaleOut::getWarehouseId, request.getWarehouseId())
-                .ge(request.getDateFrom() != null, BizSaleOut::getBizDate, request.getDateFrom())
-                .le(request.getDateTo() != null, BizSaleOut::getBizDate, request.getDateTo()));
-        if (orders.isEmpty()) {
-            return;
-        }
-        Set<Long> orderIds = orders.stream().map(BizSaleOut::getId).collect(Collectors.toSet());
-        List<BizSaleOutItem> items = saleOutItemMapper.selectList(new LambdaQueryWrapper<BizSaleOutItem>()
-                .in(BizSaleOutItem::getSaleOutId, orderIds));
-        Map<Long, Long> productCategoryMap = loadProductCategoryMap(items.stream()
-                .map(BizSaleOutItem::getProductId)
-                .collect(Collectors.toSet()));
-        for (BizSaleOutItem item : items) {
-            Long categoryId = productCategoryMap.get(item.getProductId());
-            if (categoryId == null) {
-                continue;
-            }
-            mergeCategorySummary(categorySummary, categoryId, item.getAmount(), item.getQty());
-        }
-    }
-
-    private Map<Long, Long> loadProductCategoryMap(Set<Long> productIds) {
-        if (productIds.isEmpty()) {
-            return Map.of();
-        }
-        return baseProductMapper.selectList(new LambdaQueryWrapper<BaseProduct>().in(BaseProduct::getId, productIds))
-                .stream()
-                .collect(Collectors.toMap(BaseProduct::getId, BaseProduct::getCategoryId));
-    }
-
-    private void mergeCategorySummary(Map<Long, AmountSummaryResponse> categorySummary,
-                                      Long categoryId,
-                                      BigDecimal amount,
-                                      BigDecimal qty) {
-        AmountSummaryResponse response = categorySummary.computeIfAbsent(categoryId,
-                id -> toAmountSummary("category:" + id, BigDecimal.ZERO, BigDecimal.ZERO));
-        response.setTotalAmount(response.getTotalAmount().add(amount));
-        response.setTotalQty(response.getTotalQty().add(qty));
     }
 }

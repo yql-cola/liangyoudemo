@@ -15,6 +15,13 @@ public class InventoryResponse {
     private Long warehouseId;
     @Schema(description = "商品 ID", example = "1001")
     private Long productId;
+    private String warehouseName;
+    private String productName;
+    private String spec;
+    private Long categoryId;
+    private String categoryName;
+    private Long unitId;
+    private String unitName;
     @Schema(description = "总数量", example = "520")
     private BigDecimal totalQty;
     @Schema(description = "锁定数量", example = "20")
