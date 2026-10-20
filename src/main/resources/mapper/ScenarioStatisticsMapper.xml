@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.liangyou.modules.statistics.mapper.ScenarioStatisticsMapper">
+  <sql id="facts">
+    SELECT 'purchase' AS stat_type, h.id AS order_id, h.biz_date, h.warehouse_id, h.supplier_id AS partner_id,
+           h.supplier_id, NULL AS customer_id, i.product_id, COALESCE(i.base_qty,i.qty) AS qty, i.amount,
+           s.supplier_code AS partner_code, s.supplier_name AS partner_name
+    FROM biz_purchase_in h JOIN biz_purchase_in_item i ON i.purchase_in_id=h.id
+    LEFT JOIN base_supplier s ON s.id=h.supplier_id
+    WHERE h.deleted=0
+    UNION ALL
+    SELECT 'sale', h.id, CAST(h.completed_time AS DATE), h.warehouse_id, h.customer_id,
+           NULL, h.customer_id, i.product_id, COALESCE(i.base_qty,i.qty), i.amount,
+           COALESCE(c.customer_code,'GUEST'),
+           CASE WHEN h.customer_id IS NULL THEN '散客' ELSE h.customer_name_snapshot END
+    FROM biz_sale_out h JOIN biz_sale_out_item i ON i.sale_out_id=h.id
+    LEFT JOIN base_customer c ON c.id=h.customer_id
+    WHERE h.deleted=0 AND h.order_status='completed' AND h.completed_time IS NOT NULL
+  </sql>
+  <sql id="productFilters">
+    <if test="q.productId != null">AND p.id=#{q.productId}</if>
+    <if test="q.categoryIds != null and !q.categoryIds.isEmpty()">
+      AND p.category_id IN <foreach collection="q.categoryIds" item="id" open="(" close=")" separator=",">#{id}</foreach>
+    </if>
+  </sql>
+  <sql id="businessDimension">
+    <choose>
+      <when test="dimension == 'date'">CONCAT('',f.biz_date)</when>
+      <when test="dimension == 'month'">SUBSTRING(CONCAT('',f.biz_date),1,7)</when>
+      <when test="dimension == 'partner'">COALESCE(CONCAT('',f.partner_id),'guest')</when>
+      <when test="dimension == 'category'">CONCAT('',COALESCE(p.category_id,0))</when>
+      <otherwise>CONCAT('',p.id)</otherwise>
+    </choose>
+  </sql>
+  <select id="business" resultType="org.liangyou.modules.statistics.vo.ScenarioStatisticsResponse$Row">
+    SELECT <include refid="businessDimension"/> AS dimension_id,
+      <choose>
+        <when test="dimension == 'partner'">MAX(f.partner_code) AS dimension_code, MAX(f.partner_name) AS dimension_name,</when>
+        <when test="dimension == 'category'">'' AS dimension_code, MAX(COALESCE(c.category_name,'未分类')) AS dimension_name,</when>
+        <when test="dimension == 'date' or dimension == 'month'"><include refid="businessDimension"/> AS dimension_code, <include refid="businessDimension"/> AS dimension_name,</when>
+        <otherwise>MAX(p.product_code) AS dimension_code, MAX(p.product_name) AS dimension_name,</otherwise>
+      </choose>
+      CASE WHEN COUNT(DISTINCT c.id)=1 THEN MAX(c.category_name) ELSE '' END AS category_name,
+      CASE WHEN COUNT(DISTINCT p.id)=1 THEN MAX(p.spec) ELSE '' END AS spec,
+      CASE WHEN COUNT(DISTINCT u.id)=1 THEN MAX(u.unit_name) ELSE '多种基础单位' END AS unit_name,
+      GROUP_CONCAT(DISTINCT CASE WHEN f.stat_type='purchase' THEN f.partner_name ELSE NULL END SEPARATOR '、') AS supplier_name,
+      GROUP_CONCAT(DISTINCT CASE WHEN f.stat_type='purchase' THEN f.partner_code ELSE NULL END SEPARATOR ',') AS supplier_code,
+      SUM(f.amount) AS amount, SUM(f.qty) AS qty,
+      COUNT(DISTINCT CONCAT(f.stat_type,':',CONCAT('',f.order_id))) AS order_count,
+      SUM(CASE WHEN f.stat_type='purchase' THEN f.amount ELSE 0 END) AS purchase_amount,
+      SUM(CASE WHEN f.stat_type='sale' THEN f.amount ELSE 0 END) AS sale_amount,
+      SUM(CASE WHEN f.stat_type='purchase' THEN f.qty ELSE 0 END) AS purchase_qty,
+      SUM(CASE WHEN f.stat_type='sale' THEN f.qty ELSE 0 END) AS sale_qty
+    FROM (<include refid="facts"/>) f
+    JOIN base_product p ON p.id=f.product_id
+    LEFT JOIN base_product_category c ON c.id=p.category_id
+    LEFT JOIN base_unit u ON u.id=p.base_unit_id
+    WHERE 1=1
+    <if test="source != 'all'">AND f.stat_type=#{source}</if>
+    <if test="q.warehouseId != null">AND f.warehouse_id=#{q.warehouseId}</if>
+    <if test="q.customerId != null">AND f.customer_id=#{q.customerId}</if>
+    <if test="q.supplierId != null">AND f.supplier_id=#{q.supplierId}</if>
+    <if test="q.dateFrom != null">AND f.biz_date &gt;=#{q.dateFrom}</if>
+    <if test="q.dateTo != null">AND f.biz_date &lt;=#{q.dateTo}</if>
+    <include refid="productFilters"/>
+    GROUP BY <include refid="businessDimension"/>
+    ORDER BY amount DESC, dimension_id
+  </select>
+  <sql id="inventoryDimension">
+    <choose>
+      <when test="dimension == 'warehouse'">CONCAT('',s.warehouse_id)</when>
+      <when test="dimension == 'category'">CONCAT('',COALESCE(p.category_id,0))</when>
+      <otherwise>CONCAT(CONCAT('',s.warehouse_id),':',CONCAT('',p.id))</otherwise>
+    </choose>
+  </sql>
+  <select id="inventory" resultType="org.liangyou.modules.statistics.vo.ScenarioStatisticsResponse$Row">
+    SELECT <include refid="inventoryDimension"/> AS dimension_id,
+      <choose>
+        <when test="dimension == 'warehouse'">MAX(w.warehouse_code) AS dimension_code, MAX(w.warehouse_name) AS dimension_name,</when>
+        <when test="dimension == 'category'">'' AS dimension_code, MAX(COALESCE(c.category_name,'未分类')) AS dimension_name,</when>
+        <otherwise>MAX(p.product_code) AS dimension_code, MAX(p.product_name) AS dimension_name,</otherwise>
+      </choose>
+      MAX(w.warehouse_name) AS warehouse_name,
+      CASE WHEN COUNT(DISTINCT c.id)=1 THEN MAX(c.category_name) ELSE '' END AS category_name,
+      CASE WHEN COUNT(DISTINCT u.id)=1 THEN MAX(u.unit_name) ELSE '多种基础单位' END AS unit_name,
+      SUM(s.total_qty) AS qty, SUM(s.available_qty) AS available_qty, SUM(s.locked_qty) AS locked_qty,
+      SUM(COALESCE(b.value_amount,0)) AS amount
+    FROM inv_stock s JOIN base_product p ON p.id=s.product_id
+    LEFT JOIN sys_warehouse w ON w.id=s.warehouse_id
+    LEFT JOIN base_product_category c ON c.id=p.category_id
+    LEFT JOIN base_unit u ON u.id=p.base_unit_id
+    LEFT JOIN (SELECT warehouse_id,product_id,SUM(remain_qty*unit_price) AS value_amount
+               FROM inv_batch WHERE deleted=0 GROUP BY warehouse_id,product_id) b
+           ON b.warehouse_id=s.warehouse_id AND b.product_id=s.product_id
+    WHERE s.deleted=0
+    <if test="q.warehouseId != null">AND s.warehouse_id=#{q.warehouseId}</if>
+    <include refid="productFilters"/>
+    GROUP BY <include refid="inventoryDimension"/>
+    ORDER BY amount DESC, dimension_id
+  </select>
+</mapper>
