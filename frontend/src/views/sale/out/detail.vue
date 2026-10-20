@@ -1,5 +1,5 @@
-<template><BusinessOrderDetail kind="sale" /></template>
+<template><SaleOrderDetail /></template>
 <script>
-import BusinessOrderDetail from '@/views/purchase/in/BusinessOrderDetail.vue'
-export default { name: 'SaleOutDetail', components: { BusinessOrderDetail } }
+import SaleOrderDetail from './SaleOrderDetail.vue'
+export default { name: 'SaleOutDetail', components: { SaleOrderDetail } }
 </script>

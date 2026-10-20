@@ -1,0 +1,12 @@
+-- 后续常规 SQL 变更统一追加在本文件末尾。
+-- 每段变更需注明 Asia/Shanghai 日期时间、原因、影响对象和执行注意事项。
+-- 已执行段落保留原样；历史数据迁移按 AGENTS.md 单独提供脚本，由用户手动执行。
+
+-- 2026-10-20 10:18:19 Asia/Shanghai
+-- 原因：上线统一销售开单、库存占用、配送状态及销售清单导出功能。
+-- 影响对象：biz_sale_out、biz_sale_out_item、新表 sale_order_reservation、sale_order_event、sys_permission。
+-- 执行顺序：已有旧版库先运行 scripts/upgrade-v1.1.0.sh，v1.1.0 库再运行 scripts/upgrade-unified-sales.sh；
+--           全新库依次运行 init.sql、10_17_permissions.sql、10_19_basic_import_permissions.sql、10_20_unified_sales_permissions.sql。
+-- 注意事项：本次不迁移旧销售单。执行前检查 SELECT COUNT(*) FROM grain_oil_ims.biz_sale_out；必须为 0，
+--           否则补丁会主动报错停止。保留其他基础资料数据；备份数据库后手动执行一次，不得重复执行。
+-- 校验：检查新增列及 COLUMN_COMMENT，确认两个新表均存在 AUTO_INCREMENT 主键及索引，并核对 sale:order:* 权限。

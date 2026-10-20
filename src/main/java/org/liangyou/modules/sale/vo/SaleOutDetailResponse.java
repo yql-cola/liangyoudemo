@@ -5,6 +5,7 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
@@ -23,6 +24,17 @@ public class SaleOutDetailResponse {
     private Long customerId;
     @Schema(description = "客户名称", example = "门店客户")
     private String customerName;
+    private String saleType;
+    private String fulfillmentType;
+    private String orderStatus;
+    private String contactName;
+    private String contactPhone;
+    private String deliveryAddress;
+    private String deliveryRemark;
+    private String handlerName;
+    private LocalDateTime plannedDeliveryTime;
+    private LocalDateTime recordedTime;
+    private LocalDateTime completedTime;
     @Schema(description = "业务日期", example = "2026-04-16")
     private LocalDate bizDate;
     @Schema(description = "总金额", example = "3000.00")
@@ -33,6 +45,15 @@ public class SaleOutDetailResponse {
     private String remark;
     @Schema(description = "明细项")
     private List<Item> items;
+    private List<Event> events;
+
+    @Data
+    public static class Event {
+        private String eventType;
+        private Long operatorId;
+        private String detail;
+        private LocalDateTime createdTime;
+    }
 
     @Data
     @Schema(description = "销售明细响应")

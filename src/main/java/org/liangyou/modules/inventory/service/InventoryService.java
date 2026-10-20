@@ -176,6 +176,7 @@ public class InventoryService {
 
     private InventoryResponse toInventoryResponse(InvStock stock) {
         var response = new InventoryResponse(); BeanUtils.copyProperties(stock, response);
+        response.setInDeliveryQty(invStockMapper.inDeliveryQty(stock.getWarehouseId(), stock.getProductId()));
         enrich(response, stock.getWarehouseId(), stock.getProductId()); return response;
     }
 

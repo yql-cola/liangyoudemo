@@ -19,10 +19,17 @@ public class SaleOutQueryRequest {
     private Long warehouseId;
     @Schema(description = "客户 ID", example = "20")
     private Long customerId;
+    private String customerName;
+    private Boolean guest;
+    private String saleType;
+    private String fulfillmentType;
+    private String orderStatus;
     @Schema(description = "状态", example = "1")
     private Integer status;
     @Schema(description = "业务开始日期", example = "2026-04-01")
     private LocalDate bizDateFrom;
     @Schema(description = "业务结束日期", example = "2026-04-30")
     private LocalDate bizDateTo;
+    private LocalDate completedDateFrom;
+    private LocalDate completedDateTo;
 }

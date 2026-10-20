@@ -26,6 +26,8 @@ public class InventoryResponse {
     private BigDecimal totalQty;
     @Schema(description = "锁定数量", example = "20")
     private BigDecimal lockedQty;
+    @Schema(description = "配送中占用的基础数量")
+    private BigDecimal inDeliveryQty;
     @Schema(description = "可用数量", example = "500")
     private BigDecimal availableQty;
 }

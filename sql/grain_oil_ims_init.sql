@@ -269,8 +269,20 @@ CREATE TABLE biz_sale_out (
     id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '销售出库单ID',
     order_no VARCHAR(64) NOT NULL COMMENT '出库单号',
     warehouse_id BIGINT NOT NULL COMMENT '仓库ID',
-    customer_id BIGINT NOT NULL COMMENT '客户ID',
+    customer_id BIGINT DEFAULT NULL COMMENT '客户ID，散客为空',
     biz_date DATE NOT NULL COMMENT '业务日期',
+    sale_type VARCHAR(16) NOT NULL DEFAULT 'retail' COMMENT '销售类型：retail零售、wholesale批发',
+    fulfillment_type VARCHAR(16) NOT NULL DEFAULT 'pickup' COMMENT '交付方式：pickup自提、delivery配送',
+    order_status VARCHAR(32) NOT NULL DEFAULT 'draft' COMMENT '订单状态：草稿、待交付、待配送、配送中、待退回、已完成、已取消或已退回',
+    customer_name_snapshot VARCHAR(128) NOT NULL DEFAULT '散客' COMMENT '本单客户名称快照',
+    contact_name_snapshot VARCHAR(64) DEFAULT NULL COMMENT '本单收货人快照',
+    contact_phone_snapshot VARCHAR(32) DEFAULT NULL COMMENT '本单联系电话快照',
+    delivery_address_snapshot VARCHAR(255) DEFAULT NULL COMMENT '本单配送地址快照',
+    delivery_remark VARCHAR(255) DEFAULT NULL COMMENT '本单配送备注',
+    handler_name VARCHAR(64) DEFAULT NULL COMMENT '本单经手人',
+    planned_delivery_time DATETIME DEFAULT NULL COMMENT '计划送达时间',
+    completed_time DATETIME DEFAULT NULL COMMENT '实际完成时间',
+    recorded_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '录单时间',
     total_amount DECIMAL(18,2) NOT NULL DEFAULT 0 COMMENT '总金额',
     status TINYINT NOT NULL DEFAULT 1 COMMENT '状态',
     remark VARCHAR(255) DEFAULT NULL,
@@ -296,6 +308,9 @@ CREATE TABLE biz_sale_out_item (
     base_qty DECIMAL(18,4) NULL COMMENT '保存时基础单位数量快照',
     unit_price DECIMAL(18,4) NOT NULL COMMENT '销售单价',
     amount DECIMAL(18,2) NOT NULL COMMENT '金额',
+    product_name_snapshot VARCHAR(128) DEFAULT NULL COMMENT '保存时商品名称快照',
+    spec_snapshot VARCHAR(128) DEFAULT NULL COMMENT '保存时商品规格快照',
+    unit_name_snapshot VARCHAR(64) DEFAULT NULL COMMENT '保存时业务单位名称快照',
     remark VARCHAR(255) DEFAULT NULL,
     created_by BIGINT DEFAULT NULL,
     created_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -303,6 +318,31 @@ CREATE TABLE biz_sale_out_item (
     KEY idx_sale_item_product (product_id),
     KEY idx_sale_item_warehouse (warehouse_id)
 ) COMMENT='销售出库单明细表';
+
+CREATE TABLE sale_order_reservation (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '销售订单库存占用ID',
+    sale_out_id BIGINT NOT NULL COMMENT '销售订单ID',
+    sale_out_item_id BIGINT NOT NULL COMMENT '销售订单明细ID',
+    warehouse_id BIGINT NOT NULL COMMENT '仓库ID',
+    product_id BIGINT NOT NULL COMMENT '商品ID',
+    base_qty DECIMAL(18,4) NOT NULL COMMENT '占用的基础单位数量',
+    status VARCHAR(16) NOT NULL DEFAULT 'active' COMMENT '占用状态：active有效、released已释放、consumed已出库',
+    created_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    UNIQUE KEY uk_sale_reservation_item (sale_out_item_id),
+    KEY idx_sale_reservation_order (sale_out_id,status),
+    KEY idx_sale_reservation_stock (warehouse_id,product_id,status)
+) COMMENT='销售订单库存占用';
+
+CREATE TABLE sale_order_event (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '销售订单操作记录ID',
+    sale_out_id BIGINT NOT NULL COMMENT '销售订单ID',
+    event_type VARCHAR(32) NOT NULL COMMENT '操作类型',
+    operator_id BIGINT DEFAULT NULL COMMENT '操作人用户ID',
+    detail VARCHAR(255) DEFAULT NULL COMMENT '原因或打印模板版本等操作详情',
+    created_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '操作请求时间',
+    KEY idx_sale_event_order (sale_out_id,created_time)
+) COMMENT='销售配送与打印操作记录';
 
 CREATE TABLE inv_stock (
     id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '库存汇总ID',

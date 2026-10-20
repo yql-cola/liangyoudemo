@@ -87,10 +87,23 @@ export const constantRoutes = [
     meta: { title: '销售管理', icon: 'el-icon-sell' },
     children: [
       {
+        path: 'new',
+        name: 'SaleOrderNew',
+        component: () => import('@/views/sale/out/SaleOrderEditor'),
+        meta: { title: '销售开单', permission: 'sale:order:create' }
+      },
+      {
         path: 'out',
         name: 'SaleOut',
         component: () => import('@/views/sale/out/index'),
-        meta: { title: '销售出库', permission: 'sale:order:list' }
+        meta: { title: '销售订单', permission: 'sale:order:list' }
+      },
+      {
+        path: 'out/edit/:id',
+        name: 'SaleOrderEdit',
+        component: () => import('@/views/sale/out/SaleOrderEditor'),
+        hidden: true,
+        meta: { title: '编辑销售订单', permission: 'sale:order:update' }
       },
       {
         path: 'out/detail/:id',
@@ -98,6 +111,13 @@ export const constantRoutes = [
         component: () => import('@/views/sale/out/detail'),
         hidden: true,
         meta: { title: '销售详情', permission: 'sale:order:view' }
+      },
+      {
+        path: 'out/print/:id',
+        name: 'SaleOrderPrint',
+        component: () => import('@/views/sale/out/SaleOrderPrint'),
+        hidden: true,
+        meta: { title: '打印配送清单', permission: 'sale:order:print' }
       }
     ]
   },

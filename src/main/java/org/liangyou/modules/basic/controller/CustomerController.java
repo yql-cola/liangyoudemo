@@ -58,6 +58,17 @@ public class CustomerController {
     @Operation(summary = "查询启用的客户选项")
     public ApiResponse<List<BasicOptionResponse>> options(String keyword) { return ApiResponse.success(service.customerOptions(keyword)); }
 
+    @GetMapping("/search")
+    public ApiResponse<List<BaseCustomer>> search(String keyword) { return ApiResponse.success(service.searchCustomers(keyword)); }
+
+    public record QuickCustomerRequest(String customerName, String contactName, String contactPhone, String address) {}
+
+    @PostMapping("/quick")
+    public ApiResponse<BaseCustomer> quick(@RequestBody QuickCustomerRequest request) {
+        return ApiResponse.success(service.quickCreateCustomer(request.customerName(), request.contactName(),
+                request.contactPhone(), request.address()));
+    }
+
     @GetMapping("/export")
     @Operation(summary = "导出全部符合筛选条件的客户")
     public ResponseEntity<byte[]> export(@Valid BasicQueryRequest request) {

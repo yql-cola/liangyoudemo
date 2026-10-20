@@ -28,7 +28,6 @@ public class SaleOutItemRequest {
     @DecimalMin(value = "0", message = "price-must-be-nonnegative")
     @Digits(integer = 14, fraction = 4)
     private BigDecimal unitPrice;
-    @NotNull(message = "amount-required")
     @Schema(description = "金额", example = "3000.00")
     private BigDecimal amount;
     @Schema(description = "备注", example = "门店零售")

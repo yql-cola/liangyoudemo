@@ -25,13 +25,13 @@ class SaleOutControllerTest {
 
     @Test
     void createSaleOutReturnsDocumentId() throws Exception {
-        SaleOutService saleOutService = new SaleOutService(null, null, null, null, null, null, null) {
+        SaleOutService saleOutService = new SaleOutService(null, null, null, null, null, null, null, null) {
             @Override
             public Long create(SaleOutCreateRequest request) {
                 return 300L;
             }
         };
-        MockMvc mockMvc = MockMvcBuilders.standaloneSetup(new SaleOutController(saleOutService))
+        MockMvc mockMvc = MockMvcBuilders.standaloneSetup(new SaleOutController(saleOutService, null))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
         ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
@@ -58,12 +58,12 @@ class SaleOutControllerTest {
 
     @Test
     void updateSaleOutReturnsSuccess() throws Exception {
-        SaleOutService saleOutService = new SaleOutService(null, null, null, null, null, null, null) {
+        SaleOutService saleOutService = new SaleOutService(null, null, null, null, null, null, null, null) {
             @Override
             public void update(Long id, SaleOutCreateRequest request) {
             }
         };
-        MockMvc mockMvc = MockMvcBuilders.standaloneSetup(new SaleOutController(saleOutService))
+        MockMvc mockMvc = MockMvcBuilders.standaloneSetup(new SaleOutController(saleOutService, null))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
         ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
@@ -90,7 +90,7 @@ class SaleOutControllerTest {
 
     @Test
     void detailReturnsMasterDataNames() throws Exception {
-        SaleOutService saleOutService = new SaleOutService(null, null, null, null, null, null, null) {
+        SaleOutService saleOutService = new SaleOutService(null, null, null, null, null, null, null, null) {
             @Override
             public org.liangyou.modules.sale.vo.SaleOutDetailResponse detail(Long id) {
                 org.liangyou.modules.sale.vo.SaleOutDetailResponse response =
@@ -110,7 +110,7 @@ class SaleOutControllerTest {
                 return response;
             }
         };
-        MockMvc mockMvc = MockMvcBuilders.standaloneSetup(new SaleOutController(saleOutService))
+        MockMvc mockMvc = MockMvcBuilders.standaloneSetup(new SaleOutController(saleOutService, null))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
 

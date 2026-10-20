@@ -23,6 +23,9 @@ public class BizSaleOutItem {
     private BigDecimal baseQty;
     private BigDecimal unitPrice;
     private BigDecimal amount;
+    private String productNameSnapshot;
+    private String specSnapshot;
+    private String unitNameSnapshot;
     private String remark;
     private Long createdBy;
     private LocalDateTime createdTime;
