@@ -70,11 +70,14 @@ export default {
 
 <style lang="scss" scoped>
 .sidebar {
-  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
   background: #263445;
 }
 
 .brand {
+  flex-shrink: 0;
   height: 56px;
   line-height: 56px;
   color: #fff;
@@ -84,6 +87,10 @@ export default {
 }
 
 .el-menu {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
   border-right: 0;
 }
 </style>

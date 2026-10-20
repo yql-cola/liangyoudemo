@@ -22,7 +22,7 @@ export default {
 <style lang="scss" scoped>
 .app-wrapper {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
   background: #f3f5f8;
 }
 
@@ -33,6 +33,7 @@ export default {
 
 .main-container {
   min-width: 0;
+  min-height: 0;
   flex: 1;
   display: flex;
   flex-direction: column;
