@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 import org.liangyou.modules.user.entity.SysRolePermission;
 
 import java.util.List;
@@ -13,4 +14,7 @@ public interface SysRolePermissionMapper extends BaseMapper<SysRolePermission> {
 
     @Select("select id, role_id, permission_id, created_by, created_time, deleted from sys_role_permission where role_id = #{roleId}")
     List<SysRolePermission> selectAllByRoleId(@Param("roleId") Long roleId);
+
+    @Update("update sys_role_permission set deleted = 0 where id = #{id} and deleted = 1")
+    int restoreById(@Param("id") Long id);
 }

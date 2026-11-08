@@ -12,6 +12,7 @@ import org.liangyou.modules.user.dto.RoleQueryRequest;
 import org.liangyou.modules.user.dto.RoleUpdateRequest;
 import org.liangyou.modules.user.service.UserService;
 import org.liangyou.modules.user.vo.RoleResponse;
+import org.liangyou.modules.user.vo.AssignablePermissionResponse;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -55,6 +56,18 @@ public class RoleController {
     @Operation(summary = "查询角色列表", description = "按名称、编码和状态过滤角色。权限点：system:role:list")
     public ApiResponse<List<RoleResponse>> list(RoleQueryRequest request) {
         return ApiResponse.success(userService.listRoles(request));
+    }
+
+    @GetMapping("/assignable-permissions")
+    @Operation(summary = "查询可分配权限树", description = "包含启用和停用的已有权限。权限点：system:role:grant")
+    public ApiResponse<List<AssignablePermissionResponse>> assignablePermissions() {
+        return ApiResponse.success(userService.getAssignablePermissionTree());
+    }
+
+    @GetMapping("/{id}/permissions")
+    @Operation(summary = "查询角色已分配权限", description = "仅返回角色关联的权限 ID。权限点：system:role:grant")
+    public ApiResponse<List<Long>> rolePermissions(@PathVariable Long id) {
+        return ApiResponse.success(userService.getRolePermissionIds(id));
     }
 
     @PostMapping("/{id}/permissions")

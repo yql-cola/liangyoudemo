@@ -3,6 +3,7 @@ package org.liangyou.modules.basic.vo;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.math.BigDecimal;
 
 @Data
 public class ProductResponse {
@@ -16,6 +17,9 @@ public class ProductResponse {
     private String spec;
     private String barcode;
     private String imageUrl;
+    private boolean hasImage;
+    private String imageVersion;
+    private BigDecimal defaultSalePrice;
     private Long baseUnitId;
     private String baseUnitName;
     private Integer shelfLifeDays;

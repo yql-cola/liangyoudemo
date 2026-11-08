@@ -26,7 +26,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ApiResponse<Void>> handleBusinessException(BusinessException ex) {
-        HttpStatus status = ex.getCode() == 401 ? HttpStatus.UNAUTHORIZED : HttpStatus.BAD_REQUEST;
+        HttpStatus status = ex.getCode() == 401 ? HttpStatus.UNAUTHORIZED
+                : ex.getCode() == 503 ? HttpStatus.SERVICE_UNAVAILABLE : HttpStatus.BAD_REQUEST;
         return ResponseEntity.status(status).body(ApiResponse.failure(ex.getCode(), ex.getMessage()));
     }
 

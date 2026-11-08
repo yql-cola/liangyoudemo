@@ -21,6 +21,11 @@ server:
   max-http-request-header-size: 16KB
 
 app:
+  storage:
+    endpoint: ${MINIO_ENDPOINT:http://127.0.0.1:9000}
+    bucket: ${MINIO_BUCKET:product-images}
+    access-key: ${MINIO_ACCESS_KEY:}
+    secret-key: ${MINIO_SECRET_KEY:}
   swagger:
     global-headers:
       - X-Tenant-Id

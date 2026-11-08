@@ -8,6 +8,7 @@ import org.liangyou.modules.basic.dto.ProductSaveRequest;
 import org.liangyou.modules.basic.dto.StatusUpdateRequest;
 import org.liangyou.modules.basic.service.BasicDataService;
 import org.liangyou.modules.basic.service.ExcelExportService;
+import org.liangyou.modules.basic.service.ProductImageService;
 import org.liangyou.modules.basic.vo.BasicOptionResponse;
 import org.liangyou.modules.basic.vo.ProductResponse;
 import org.springframework.http.MediaType;
@@ -25,6 +26,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -46,7 +48,7 @@ class ProductControllerTest {
         when(service.createProduct(any(ProductSaveRequest.class))).thenReturn(product);
         when(service.updateProduct(eq(1L), any(ProductSaveRequest.class))).thenReturn(product);
 
-        MockMvc mockMvc = MockMvcBuilders.standaloneSetup(new ProductController(service, excelExportService))
+        MockMvc mockMvc = MockMvcBuilders.standaloneSetup(new ProductController(service, excelExportService, mock(ProductImageService.class)))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
 
@@ -90,7 +92,7 @@ class ProductControllerTest {
         when(service.productOptions("米")).thenReturn(List.of(option));
         when(excelExportService.exportProducts(any())).thenReturn("xlsx".getBytes());
 
-        MockMvc mockMvc = MockMvcBuilders.standaloneSetup(new ProductController(service, excelExportService))
+        MockMvc mockMvc = MockMvcBuilders.standaloneSetup(new ProductController(service, excelExportService, mock(ProductImageService.class)))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
 
@@ -108,5 +110,17 @@ class ProductControllerTest {
         mockMvc.perform(get("/api/v1/basic/products/export"))
                 .andExpect(status().isOk())
                 .andExpect(header().string("Content-Disposition", "attachment; filename=\"products.xlsx\""));
+    }
+
+    @Test
+    void imageUploadRejectsUnsupportedContent() throws Exception {
+        BasicDataService service = mock(BasicDataService.class);
+        ExcelExportService export = mock(ExcelExportService.class);
+        ProductImageService images = new ProductImageService(null, "http://127.0.0.1:9000", "images", "", "");
+        MockMvc mvc = MockMvcBuilders.standaloneSetup(new ProductController(service, export, images))
+                .setControllerAdvice(new GlobalExceptionHandler()).build();
+        mvc.perform(multipart("/api/v1/basic/products/1/image")
+                        .file(new org.springframework.mock.web.MockMultipartFile("file", "bad.txt", "text/plain", "bad".getBytes())))
+                .andExpect(status().isBadRequest());
     }
 }

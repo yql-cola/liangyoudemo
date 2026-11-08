@@ -1,4 +1,4 @@
-import { blankSaleOrder, validateSaleOrder, salePayload, totalAmount, copySaleOrder } from '@/views/sale/out/saleOrderForm'
+import { blankSaleOrder, validateSaleOrder, salePayload, totalAmount, copySaleOrder, defaultUnitPrice } from '@/views/sale/out/saleOrderForm'
 
 describe('sale order form', () => {
   it('allows a pickup guest without a customer record', () => {
@@ -30,5 +30,17 @@ describe('sale order form', () => {
     expect(copy.id).toBeUndefined()
     expect(copy.items[0].id).toBeUndefined()
     expect(copy.items[0].productId).toBe(2)
+  })
+  it('uses the one base-unit price for converted sale units', () => {
+    expect(defaultUnitPrice('12.3456', '10')).toBe(123.456)
+    expect(defaultUnitPrice(null, '10')).toBeNull()
+  })
+  it('requires an explicit price when the product has no default', () => {
+    const form = blankSaleOrder()
+    form.warehouseId = 1
+    form.items = [{ productId: 2, unitId: 3, qty: 1, unitPrice: null }]
+    expect(validateSaleOrder(form)).toContain('单价')
+    form.items[0].unitPrice = 0
+    expect(validateSaleOrder(form)).toBe('')
   })
 })

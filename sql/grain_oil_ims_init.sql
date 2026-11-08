@@ -530,3 +530,10 @@ WHERE u.username = 'yaoqianglong'
     WHERE ur.user_id = u.id
       AND ur.role_id = r.id
 );
+
+-- 2026-10-20 23:54:28 Asia/Shanghai：全新环境初始化商品默认售价及私有主图键。
+-- 执行顺序：在本初始化脚本既有 base_product 建表语句之后执行；仅适用于全新空库，勿用于升级已有库。
+-- 前置条件：base_product 已创建，且以下两列尚不存在；已有库只执行 update.sql 的对应追加段。
+ALTER TABLE base_product
+    ADD COLUMN default_sale_price DECIMAL(18,4) NULL COMMENT '基础单位默认销售单价',
+    ADD COLUMN image_object_key VARCHAR(255) NULL COMMENT '商品主图对象存储键';

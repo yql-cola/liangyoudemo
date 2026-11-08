@@ -22,4 +22,8 @@ public class BasicOptionResponse {
     private Long toUnitId;
     private String toUnitName;
     private java.math.BigDecimal convertRate;
+    private java.math.BigDecimal defaultSalePrice;
+    private String imageUrl;
+    private boolean hasImage;
+    private String imageVersion;
 }

@@ -1,3 +1,4 @@
+/* global BigInt */
 export function blankSaleOrder() {
   return { warehouseId: null, bizDate: new Date().toISOString().slice(0, 10), saleType: 'retail', fulfillmentType: 'pickup',
     customerId: null, customerName: '散客', contactName: '', contactPhone: '', deliveryAddress: '',
@@ -16,6 +17,18 @@ export function totalAmount(items) {
   return (items || []).reduce((sum, row) => sum + Number(row.qty || 0) * Number(row.unitPrice || 0), 0).toFixed(2)
 }
 
+export function defaultUnitPrice(basePrice, convertRate) {
+  if (basePrice === null || basePrice === undefined || basePrice === '') return null
+  const parts = [basePrice, convertRate].map(value => String(value).match(/^(\d+)(?:\.(\d+))?$/))
+  if (parts.some(part => !part)) return null
+  const [price, rate] = parts.map(part => ({ digits: BigInt(part[1] + (part[2] || '')), scale: (part[2] || '').length }))
+  const divisor = 10n ** BigInt(price.scale + rate.scale)
+  // Round the unit price to the four decimals supported by sale order items.
+  const rounded = (price.digits * rate.digits * 10000n + divisor / 2n) / divisor
+  if (rounded > 999999999999999999n) return null
+  return Number(rounded) / 10000
+}
+
 export function validateSaleOrder(form) {
   if (!form.warehouseId) return '请选择仓库'
   if (!form.bizDate) return '请选择录单日期'
@@ -29,7 +42,8 @@ export function validateSaleOrder(form) {
     const row = form.items[i]
     if (!row.productId || !row.unitId) return `第 ${i + 1} 行请选择商品和单位`
     if (!(Number(row.qty) > 0)) return `第 ${i + 1} 行数量必须大于零`
-    if (Number(row.unitPrice) < 0 || !Number.isFinite(Number(row.unitPrice))) return `第 ${i + 1} 行单价无效`
+    if (row.unitPrice === null || row.unitPrice === undefined || row.unitPrice === '' ||
+      Number(row.unitPrice) < 0 || !Number.isFinite(Number(row.unitPrice))) return `第 ${i + 1} 行单价无效`
   }
   return ''
 }

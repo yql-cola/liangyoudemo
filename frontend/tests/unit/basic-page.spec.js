@@ -2,10 +2,10 @@ import { shallowMount } from '@vue/test-utils'
 import BasicDataPage from '@/views/basic/BasicDataPage.vue'
 import { categoryParentOptions, filterCategoryTree } from '@/views/basic/categoryTree'
 import { basicSchemas } from '@/views/basic/schemas'
-import { createBasicApi, getCategoryTree } from '@/api/basic'
+import { createBasicApi, getCategoryTree, uploadProductImage } from '@/api/basic'
 import { downloadFile } from '@/utils/download'
 
-jest.mock('@/api/basic', () => ({ createBasicApi: jest.fn(), getCategoryTree: jest.fn() }))
+jest.mock('@/api/basic', () => ({ createBasicApi: jest.fn(), getCategoryTree: jest.fn(), uploadProductImage: jest.fn(), deleteProductImage: jest.fn() }))
 jest.mock('@/utils/download', () => ({ downloadFile: jest.fn() }))
 const flush = async () => { await Promise.resolve(); await Promise.resolve() }
 const stubs = ['el-card', 'el-form', 'el-form-item', 'el-input', 'el-input-number', 'el-select', 'el-option', 'el-button', 'el-table', 'el-table-column', 'el-dialog', 'el-row', 'el-col', 'el-tag', 'el-alert']
@@ -20,6 +20,37 @@ beforeEach(() => {
   api = { list: jest.fn().mockResolvedValue({ list: [], total: 0 }), get: jest.fn().mockResolvedValue({ id: 2, productCode: 'P2', productName: '完整详情' }), export: jest.fn().mockResolvedValue({ data: 'file' }), exportSelected: jest.fn().mockResolvedValue({ data: 'file' }), importFile: jest.fn(), create: jest.fn(), update: jest.fn() }
   createBasicApi.mockReturnValue(api)
   getCategoryTree.mockResolvedValue([])
+  uploadProductImage.mockReset().mockResolvedValue(null)
+})
+
+test('uploads a selected product image after creating its product record', async () => {
+  api.create.mockResolvedValue({ id: 6 })
+  const wrapper = mount(); await flush()
+  await wrapper.vm.open()
+  wrapper.vm.form = { ...wrapper.vm.form, productCode: 'P6', productName: '大米', categoryId: 1, baseUnitId: 2 }
+  const file = new File(['image'], 'rice.png', { type: 'image/png' })
+  wrapper.vm.productImageFile = file
+  await wrapper.vm.save()
+  expect(api.create).toHaveBeenCalled()
+  expect(uploadProductImage).toHaveBeenCalledWith(6, file)
+})
+
+test('retries a failed image upload without creating a second product', async () => {
+  api.create.mockResolvedValue({ id: 6 })
+  uploadProductImage.mockRejectedValueOnce(new Error('图片服务暂不可用')).mockResolvedValueOnce(null)
+  const wrapper = mount(); await flush()
+  await wrapper.vm.open()
+  wrapper.vm.form = { ...wrapper.vm.form, productCode: 'P6', productName: '大米', categoryId: 1, baseUnitId: 2 }
+  wrapper.vm.productImageFile = new File(['image'], 'rice.png', { type: 'image/png' })
+  await wrapper.vm.save()
+  expect(wrapper.vm.form.id).toBe(6)
+  expect(wrapper.vm.dialogVisible).toBe(true)
+  expect(wrapper.vm.formError).toContain('商品资料已保存，图片上传失败')
+  await wrapper.vm.save()
+  expect(api.create).toHaveBeenCalledTimes(1)
+  expect(api.update).toHaveBeenCalledWith(6, expect.any(Object))
+  expect(wrapper.vm.dialogVisible).toBe(false)
+  wrapper.destroy()
 })
 
 test('filter changes reset pagination and export sends all current filters without page limits', async () => {

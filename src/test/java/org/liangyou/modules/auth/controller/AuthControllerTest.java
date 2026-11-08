@@ -101,6 +101,34 @@ class AuthControllerTest {
     }
 
     @Test
+    void superAdminTokenOmitsPermissionCodesButResponsesKeepThem() throws Exception {
+        SysUser user = createUser();
+        user.setIsSuperAdmin(1);
+        when(userService.findByUsername("warehouse01")).thenReturn(user);
+        when(userService.loadLoginAuthorities(1L)).thenReturn(new UserService.LoginAuthorities(
+                List.of("SUPER_ADMIN"), List.of("system:role:grant")));
+        when(userService.loadActivePermissionCodes()).thenReturn(List.of("system:role:grant"));
+        when(stringRedisTemplate.hasKey(anyString())).thenReturn(false);
+
+        LoginRequest request = new LoginRequest();
+        request.setUsername("warehouse01");
+        request.setPassword("123456");
+        String body = mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.userInfo.permissions[0]").value("system:role:grant"))
+                .andReturn().getResponse().getContentAsString();
+        String token = objectMapper.readTree(body).path("data").path("token").asText();
+        String payload = new String(Base64.getUrlDecoder().decode(token.split("\\.")[1]), StandardCharsets.UTF_8);
+        assertEquals(0, objectMapper.readTree(payload).path("permissions").size());
+
+        mockMvc.perform(get("/api/v1/auth/me").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.permissions[0]").value("system:role:grant"));
+    }
+
+    @Test
     void meReturnsCurrentUserForValidToken() throws Exception {
         when(stringRedisTemplate.hasKey(anyString())).thenReturn(false);
 

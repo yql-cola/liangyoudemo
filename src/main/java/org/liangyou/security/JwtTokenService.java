@@ -54,7 +54,8 @@ public class JwtTokenService {
         claims.put("uid", principal.getId());
         claims.put("realName", principal.getRealName());
         claims.put("roles", principal.getRoles());
-        claims.put("permissions", principal.getPermissions());
+        // The role authority is enough for backend authorization; keep UI permissions in login/me responses.
+        claims.put("permissions", principal.getRoles().contains("SUPER_ADMIN") ? List.of() : principal.getPermissions());
         claims.put("iat", now.getEpochSecond());
         claims.put("exp", expiresAt.getEpochSecond());
         return sign(claims);

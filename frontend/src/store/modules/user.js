@@ -46,6 +46,9 @@ const actions = {
   async logout({ commit }) {
     try {
       await logout()
+    } catch {
+      // Local logout must finish even when the server cannot revoke the JWT.
+      console.warn('注销接口调用失败，已清理当前标签页登录态')
     } finally {
       removeToken()
       commit('RESET_USER')

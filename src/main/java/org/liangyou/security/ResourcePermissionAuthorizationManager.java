@@ -68,6 +68,15 @@ public final class ResourcePermissionAuthorizationManager implements Authorizati
         if ("basic".equals(parts[3])) {
             String prefix = BASIC.get(resource);
             if (prefix == null) return new AuthorizationDecision(false);
+            if ("products".equals(resource) && parts.length == 7 && parts[5].matches("[1-9]\\d*")
+                    && Set.of("image", "thumbnail").contains(parts[6])) {
+                if ("GET".equals(method)) return new AuthorizationDecision(permissions.contains("basic:product:view")
+                        || permissions.contains("basic:product:list")
+                        || permissions.contains("sale:order:create") || permissions.contains("sale:order:update")
+                        || permissions.contains("sale:order:view"));
+                return new AuthorizationDecision("image".equals(parts[6])
+                        && Set.of("POST", "DELETE").contains(method) && permissions.contains("basic:product:update"));
+            }
             if ("GET".equals(method) && (path.endsWith("/options") || path.endsWith("/search") || path.matches(".*/products/\\d+/units"))) {
                 return new AuthorizationDecision(permissions.contains("basic:" + prefix + ":list")
                         || permissions.stream().anyMatch(ResourcePermissionAuthorizationManager::isOptionConsumer));
@@ -133,6 +142,8 @@ public final class ResourcePermissionAuthorizationManager implements Authorizati
     }
 
     private static String systemPermission(String method, String path, String[] parts) {
+        if ("roles".equals(parts[3]) && "GET".equals(method)
+                && "/api/v1/roles/assignable-permissions".equals(path)) return "system:role:grant";
         if ("menus".equals(parts[3])) {
             return "GET".equals(method) && "/api/v1/menus/tree".equals(path) ? "system:menu:view" : null;
         }
@@ -143,6 +154,7 @@ public final class ResourcePermissionAuthorizationManager implements Authorizati
             if ("roles".equals(parts[5]) && "user".equals(resource) && "POST".equals(method)) action = "grant-role";
             if ("permissions".equals(parts[5])) {
                 if ("POST".equals(method)) action = "user".equals(resource) ? "grant-permission" : "grant";
+                if ("GET".equals(method) && "role".equals(resource)) action = "grant";
                 if ("GET".equals(method) && "user".equals(resource)) action = "view-permission";
             }
             return action == null ? null : "system:" + resource + ":" + action;

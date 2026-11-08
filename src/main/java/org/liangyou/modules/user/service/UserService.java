@@ -3,6 +3,7 @@ package org.liangyou.modules.user.service;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.liangyou.common.api.PageResponse;
 import org.liangyou.common.exception.BusinessException;
 import org.liangyou.modules.user.dto.RoleCreateRequest;
@@ -27,11 +28,13 @@ import org.liangyou.modules.user.mapper.SysUserMapper;
 import org.liangyou.modules.user.mapper.SysUserPermissionMapper;
 import org.liangyou.modules.user.mapper.SysUserRoleMapper;
 import org.liangyou.modules.user.vo.MenuTreeResponse;
+import org.liangyou.modules.user.vo.AssignablePermissionResponse;
 import org.liangyou.modules.user.vo.RoleResponse;
 import org.liangyou.modules.user.vo.UserDetailResponse;
 import org.liangyou.modules.user.vo.UserPermissionResponse;
 import org.liangyou.security.AuthenticatedUserPrincipal;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -51,6 +54,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class UserService {
 
     private final SysUserMapper sysUserMapper;
@@ -62,6 +66,7 @@ public class UserService {
 
     @Transactional
     public RoleResponse createRole(RoleCreateRequest request) {
+        checkRoleGrantAndPermissions(request.getPermissionIds());
         ensureRoleCodeAvailable(request.getRoleCode(), null);
         SysRole role = new SysRole();
         role.setRoleCode(request.getRoleCode());
@@ -69,11 +74,16 @@ public class UserService {
         role.setStatus(request.getStatus() == null ? 1 : request.getStatus());
         role.setRemark(request.getRemark());
         sysRoleMapper.insert(role);
+        if (request.getPermissionIds() != null) {
+            replaceRolePermissions(role.getId(), request.getPermissionIds());
+        }
+        log.info("创建角色 roleId={} 授权更新={}", role.getId(), request.getPermissionIds() != null);
         return toRoleResponse(role);
     }
 
     @Transactional
     public RoleResponse updateRole(Long id, RoleUpdateRequest request) {
+        checkRoleGrantAndPermissions(request.getPermissionIds());
         SysRole role = requireRole(id);
         ensureRoleCodeAvailable(request.getRoleCode(), id);
         role.setRoleCode(request.getRoleCode());
@@ -81,6 +91,10 @@ public class UserService {
         role.setStatus(request.getStatus());
         role.setRemark(request.getRemark());
         sysRoleMapper.updateById(role);
+        if (request.getPermissionIds() != null) {
+            replaceRolePermissions(id, request.getPermissionIds());
+        }
+        log.info("更新角色 roleId={} 授权更新={}", id, request.getPermissionIds() != null);
         return toRoleResponse(role);
     }
 
@@ -106,7 +120,12 @@ public class UserService {
     @Transactional
     public void assignRolePermissions(Long roleId, RolePermissionAssignRequest request) {
         requireRole(roleId);
-        List<Long> permissionIds = uniqueIds(request.getPermissionIds());
+        replaceRolePermissions(roleId, request.getPermissionIds());
+        log.info("更新角色授权 roleId={} 权限数量={}", roleId, uniqueIds(request.getPermissionIds()).size());
+    }
+
+    private void replaceRolePermissions(Long roleId, List<Long> requestedIds) {
+        List<Long> permissionIds = uniqueIds(requestedIds);
         validatePermissionIds(permissionIds);
         Map<Long, SysRolePermission> existingRelations = sysRolePermissionMapper.selectAllByRoleId(roleId).stream()
                 .collect(Collectors.toMap(SysRolePermission::getPermissionId, relation -> relation, (left, right) -> left));
@@ -121,8 +140,8 @@ public class UserService {
                 continue;
             }
             if (isDeleted(existing)) {
-                existing.setDeleted(0);
-                sysRolePermissionMapper.updateById(existing);
+                // updateById adds deleted=0 to WHERE for logical-delete entities and cannot restore this row.
+                sysRolePermissionMapper.restoreById(existing.getId());
             }
         }
         for (SysRolePermission existing : existingRelations.values()) {
@@ -131,6 +150,19 @@ public class UserService {
                 sysRolePermissionMapper.updateById(existing);
             }
         }
+    }
+
+    private void checkRoleGrantAndPermissions(List<Long> permissionIds) {
+        if (permissionIds == null) return;
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        boolean allowed = authentication != null && authentication.getAuthorities().stream()
+                .map(authority -> authority.getAuthority())
+                .anyMatch(code -> "system:role:grant".equals(code) || "ROLE_SUPER_ADMIN".equals(code) || "*:*:*".equals(code));
+        if (!allowed) {
+            log.warn("拒绝无授权权限的角色保存请求");
+            throw new AccessDeniedException("无权限访问");
+        }
+        validatePermissionIds(uniqueIds(permissionIds));
     }
 
     public List<MenuTreeResponse> getMenuTree() {
@@ -156,6 +188,37 @@ public class UserService {
                 .filter(menu -> visibleMenuIds.contains(menu.getId()))
                 .toList();
         return buildMenuTree(visibleMenus);
+    }
+
+    public List<AssignablePermissionResponse> getAssignablePermissionTree() {
+        List<SysPermission> permissions = sysPermissionMapper.selectList(new LambdaQueryWrapper<SysPermission>()
+                .orderByAsc(SysPermission::getId));
+        Map<Long, AssignablePermissionResponse> nodes = new LinkedHashMap<>();
+        for (SysPermission permission : permissions) {
+            AssignablePermissionResponse node = new AssignablePermissionResponse();
+            node.setId(permission.getId());
+            node.setPermissionCode(permission.getPermissionCode());
+            node.setPermissionName(permission.getPermissionName());
+            node.setPermissionType(permission.getPermissionType());
+            node.setParentId(permission.getParentId());
+            node.setStatus(permission.getStatus());
+            nodes.put(node.getId(), node);
+        }
+        List<AssignablePermissionResponse> roots = new ArrayList<>();
+        for (AssignablePermissionResponse node : nodes.values()) {
+            AssignablePermissionResponse parent = nodes.get(node.getParentId());
+            if (parent == null || parent == node) roots.add(node);
+            else parent.getChildren().add(node);
+        }
+        return roots;
+    }
+
+    public List<Long> getRolePermissionIds(Long roleId) {
+        requireRole(roleId);
+        return sysRolePermissionMapper.selectAllByRoleId(roleId).stream()
+                .filter(relation -> !isDeleted(relation))
+                .map(SysRolePermission::getPermissionId)
+                .toList();
     }
 
     @Transactional
@@ -315,13 +378,7 @@ public class UserService {
     public LoginAuthorities loadLoginAuthorities(Long userId) {
         SysUser user = requireUser(userId);
         if (user.getIsSuperAdmin() != null && user.getIsSuperAdmin() == 1) {
-            List<String> activeSuperAdminPermissions = sysPermissionMapper.selectList(
-                            new LambdaQueryWrapper<SysPermission>().eq(SysPermission::getStatus, 1))
-                    .stream()
-                    .map(SysPermission::getPermissionCode)
-                    .filter(StringUtils::hasText)
-                    .toList();
-            return new LoginAuthorities(List.of("SUPER_ADMIN"), activeSuperAdminPermissions);
+            return new LoginAuthorities(List.of("SUPER_ADMIN"), loadActivePermissionCodes());
         }
 
         List<Long> activeRoleIds = loadActiveRoleIds(listRoleIds(userId));
@@ -348,6 +405,14 @@ public class UserService {
 
         List<String> permissions = loadPermissionCodes(new ArrayList<>(permissionIds));
         return new LoginAuthorities(roles, permissions);
+    }
+
+    public List<String> loadActivePermissionCodes() {
+        return sysPermissionMapper.selectList(new LambdaQueryWrapper<SysPermission>()
+                        .eq(SysPermission::getStatus, 1)).stream()
+                .map(SysPermission::getPermissionCode)
+                .filter(StringUtils::hasText)
+                .toList();
     }
 
     private SysUser requireUser(Long id) {
@@ -377,6 +442,9 @@ public class UserService {
     private void validatePermissionIds(List<Long> permissionIds) {
         if (permissionIds == null || permissionIds.isEmpty()) {
             return;
+        }
+        if (permissionIds.stream().anyMatch(id -> id == null || id <= 0)) {
+            throw new BusinessException(400, "permission-id-invalid");
         }
         List<SysPermission> permissions = sysPermissionMapper.selectBatchIds(permissionIds);
         Map<Long, SysPermission> permissionMap = permissions.stream()

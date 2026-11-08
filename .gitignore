@@ -44,3 +44,6 @@ frontend/dist/
 frontend/coverage/
 frontend/.env.local
 frontend/.env.*.local
+deploy/minio/.env
+deploy/minio/data/
+/config/application-dev.properties

@@ -21,6 +21,15 @@ export function translateApiError(message) {
     'shelf-life-invalid': '保质期必须是非负整数',
     'product-unit-invalid': '所选单位不适用于该商品',
     'product-unit-unreachable': '该单位未配置到商品基础单位的换算关系',
+    'default-sale-price-invalid': '默认售价应为不小于零、最多四位小数的金额',
+    'product-image-not-found': '商品图片不存在，请刷新后重试',
+    'product-image-size-invalid': '图片大小不能超过 2 MB',
+    'product-image-format-invalid': '仅支持有效的 JPG 或 PNG 图片',
+    'product-image-dimensions-invalid': '图片像素不能超过 600 万',
+    'product-image-storage-unconfigured': '图片服务尚未配置，请联系管理员',
+    'product-image-storage-unavailable': '图片服务暂不可用，请稍后重试',
+    'product-image-processing-busy': '图片处理繁忙，请稍后重试',
+    'product-image-update-conflict': '商品图片已被修改，请刷新后重试',
     'convert-units-invalid': '源单位与目标单位必须不同',
     'convert-cycle': '单位换算不能形成循环',
     'convert-rate-inconsistent': '换算比率与现有换算关系不一致',
@@ -29,7 +38,11 @@ export function translateApiError(message) {
     'convert-rate-invalid': '换算比率必须大于零',
     'unit-convert-exists': '该商品的单位换算关系已存在',
     'unit-convert-cycle': '单位换算不能形成循环',
-    'export-failed': '导出失败，请稍后重试'
+    'export-failed': '导出失败，请稍后重试',
+    'role-code-exists': '角色编码已存在',
+    'permission-not-found': '所选权限不存在，请刷新后重试',
+    'permission-disabled': '所选权限已停用，请刷新后重试',
+    'permission-id-invalid': '权限 ID 无效'
   }
   const resources = { product: '商品', category: '分类', unit: '单位', warehouse: '仓库', supplier: '供应商', customer: '客户' }
   Object.keys(resources).forEach(key => {

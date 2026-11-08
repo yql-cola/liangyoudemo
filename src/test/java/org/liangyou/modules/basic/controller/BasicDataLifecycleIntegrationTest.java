@@ -95,6 +95,60 @@ class BasicDataLifecycleIntegrationTest {
     }
 
     @Test
+    void productDefaultPricePersistsAndAppearsInSaleSelectionOptions() throws Exception {
+        String payload = "{\"productCode\":\"PRICE-1\",\"productName\":\"带价商品\","
+                + "\"categoryId\":100,\"baseUnitId\":100,\"defaultSalePrice\":12.3456}";
+        String response = mvc.perform(post("/api/v1/basic/products").contentType(APPLICATION_JSON).content(payload))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.defaultSalePrice").value(12.3456))
+                .andReturn().getResponse().getContentAsString();
+        long id = json.readTree(response).path("data").path("id").asLong();
+        assertEquals(0, new java.math.BigDecimal("12.3456").compareTo(jdbc.queryForObject(
+                "SELECT default_sale_price FROM base_product WHERE id=?", java.math.BigDecimal.class, id)));
+        mvc.perform(get("/api/v1/basic/products/options").param("keyword", "PRICE-1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[0].defaultSalePrice").value(12.3456))
+                .andExpect(jsonPath("$.data[0].hasImage").value(false));
+        String withoutPrice = "{\"productCode\":\"PRICE-1\",\"productName\":\"带价商品\","
+                + "\"categoryId\":100,\"baseUnitId\":100,\"defaultSalePrice\":null}";
+        jdbc.update("UPDATE base_product SET image_url='https://legacy.example/rice.png', image_object_key='products/test/retained.png' WHERE id=?", id);
+        mvc.perform(put("/api/v1/basic/products/{id}", id).contentType(APPLICATION_JSON).content(withoutPrice))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.defaultSalePrice").doesNotExist());
+        assertNull(jdbc.queryForObject("SELECT default_sale_price FROM base_product WHERE id=?", java.math.BigDecimal.class, id));
+        assertEquals("products/test/retained.png", jdbc.queryForObject("SELECT image_object_key FROM base_product WHERE id=?", String.class, id));
+        assertEquals("https://legacy.example/rice.png", jdbc.queryForObject("SELECT image_url FROM base_product WHERE id=?", String.class, id));
+    }
+
+    @Test
+    void invalidDefaultPricesAreRejectedBeforePersistence() throws Exception {
+        for (String price : java.util.List.of("-1", "1.23456", "100000000000000")) {
+            String payload = "{\"productCode\":\"INVALID-PRICE\",\"productName\":\"非法价格\","
+                    + "\"categoryId\":100,\"baseUnitId\":100,\"defaultSalePrice\":" + price + "}";
+            mvc.perform(post("/api/v1/basic/products").contentType(APPLICATION_JSON).content(payload))
+                    .andExpect(status().isBadRequest());
+        }
+        assertEquals(0, jdbc.queryForObject("SELECT COUNT(*) FROM base_product WHERE product_code='INVALID-PRICE'", Integer.class));
+    }
+
+    @Test
+    void legacyProductWorkbookImportsWithoutDefaultPrice() throws Exception {
+        try (XSSFWorkbook book = new XSSFWorkbook(new ByteArrayInputStream(importer.template("products")));
+             var out = new java.io.ByteArrayOutputStream()) {
+            var sheet = book.getSheetAt(0);
+            sheet.getRow(0).removeCell(sheet.getRow(0).getCell(11));
+            String[] values = {"LEGACY-PRICE", "旧模板商品", "粮食", "", "", "", "", "BAG", "", "启用", ""};
+            var row = sheet.createRow(1);
+            for (int i = 0; i < values.length; i++) row.createCell(i).setCellValue(values[i]);
+            book.write(out);
+            mvc.perform(multipart("/api/v1/basic/products/import").file(new MockMultipartFile("file", "legacy.xlsx",
+                            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", out.toByteArray())))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.data.successRows").value(1));
+        }
+        assertNull(jdbc.queryForObject("SELECT default_sale_price FROM base_product WHERE product_code='LEGACY-PRICE'", java.math.BigDecimal.class));
+    }
+
+    @Test
     void templateEndpointDownloadsChineseXlsx() throws Exception {
         byte[] file = mvc.perform(get("/api/v1/basic/units/import/template"))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray();
@@ -143,6 +197,9 @@ class BasicDataLifecycleIntegrationTest {
         try (var connection = jdbc.getDataSource().getConnection()) {
             ScriptUtils.executeSqlScript(connection, new ByteArrayResource(ddl.getBytes(StandardCharsets.UTF_8)));
         }
+        // 初始化脚本的追加段位于种子数据后；测试截取旧 DDL 时需补齐新增商品字段。
+        jdbc.execute("ALTER TABLE base_product ADD COLUMN default_sale_price DECIMAL(18,4)");
+        jdbc.execute("ALTER TABLE base_product ADD COLUMN image_object_key VARCHAR(255)");
         jdbc.update("INSERT INTO base_unit(id,unit_code,unit_name) VALUES(100,'BAG','袋'),(200,'BOX','箱')");
         jdbc.update("INSERT INTO base_product_category(id,category_name) VALUES(100,'粮食')");
         jdbc.update("INSERT INTO base_product(id,product_code,product_name,category_id,base_unit_id) VALUES(100,'P100','大米',100,100)");

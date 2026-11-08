@@ -19,3 +19,11 @@ export function deleteRole(id) {
 export function assignRolePermissions(id, data) {
   return request({ url: `/v1/roles/${id}/permissions`, method: 'post', data })
 }
+
+export function getAssignablePermissions() {
+  return request({ url: '/v1/roles/assignable-permissions', method: 'get' })
+}
+
+export function getRolePermissionIds(id) {
+  return request({ url: `/v1/roles/${id}/permissions`, method: 'get' })
+}

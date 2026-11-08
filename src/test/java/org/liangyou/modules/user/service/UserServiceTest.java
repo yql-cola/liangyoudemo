@@ -22,8 +22,13 @@ import org.liangyou.modules.user.mapper.SysUserRoleMapper;
 import org.liangyou.modules.user.vo.UserPermissionResponse;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.access.AccessDeniedException;
 
 import java.util.List;
+import java.util.Arrays;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -48,6 +53,127 @@ class UserServiceTest {
     private SysRoleMapper sysRoleMapper;
     @Mock
     private SysPermissionMapper sysPermissionMapper;
+
+    @Test
+    void createRoleWithPermissionsRequiresGrantAuthority() {
+        UserService userService = new UserService(sysUserMapper, sysUserRoleMapper, sysRolePermissionMapper,
+                sysUserPermissionMapper, sysRoleMapper, sysPermissionMapper);
+        RoleCreateRequest request = new RoleCreateRequest();
+        request.setRoleCode("WAREHOUSE");
+        request.setRoleName("仓库人员");
+        request.setPermissionIds(List.of());
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
+                "tester", null, List.of(new SimpleGrantedAuthority("system:role:create"))));
+        try {
+            assertThrows(AccessDeniedException.class, () -> userService.createRole(request));
+            verify(sysRoleMapper, never()).insert(any(SysRole.class));
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void createRoleWithoutPermissionFieldDoesNotChangeRelations() {
+        UserService userService = new UserService(sysUserMapper, sysUserRoleMapper, sysRolePermissionMapper,
+                sysUserPermissionMapper, sysRoleMapper, sysPermissionMapper);
+        RoleCreateRequest request = new RoleCreateRequest();
+        request.setRoleCode("WAREHOUSE");
+        request.setRoleName("仓库人员");
+        when(sysRoleMapper.selectAllByRoleCode("WAREHOUSE")).thenReturn(List.of());
+
+        userService.createRole(request);
+
+        verify(sysRoleMapper).insert(any(SysRole.class));
+        verify(sysRolePermissionMapper, never()).selectAllByRoleId(any());
+    }
+
+    @Test
+    void updateRoleWithEmptyPermissionIdsClearsExistingGrant() {
+        UserService userService = new UserService(sysUserMapper, sysUserRoleMapper, sysRolePermissionMapper,
+                sysUserPermissionMapper, sysRoleMapper, sysPermissionMapper);
+        SysRole role = new SysRole();
+        role.setId(1L);
+        role.setRoleCode("WAREHOUSE");
+        when(sysRoleMapper.selectById(1L)).thenReturn(role);
+        when(sysRoleMapper.selectAllByRoleCode("WAREHOUSE")).thenReturn(List.of(role));
+        SysRolePermission relation = new SysRolePermission();
+        relation.setId(2L);
+        relation.setRoleId(1L);
+        relation.setPermissionId(101L);
+        relation.setDeleted(0);
+        when(sysRolePermissionMapper.selectAllByRoleId(1L)).thenReturn(List.of(relation));
+        RoleUpdateRequest request = new RoleUpdateRequest();
+        request.setRoleCode("WAREHOUSE");
+        request.setRoleName("仓库人员");
+        request.setStatus(1);
+        request.setPermissionIds(List.of());
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
+                "tester", null, List.of(new SimpleGrantedAuthority("system:role:grant"))));
+        try {
+            userService.updateRole(1L, request);
+            verify(sysRolePermissionMapper).updateById(relation);
+            assertEquals(1, relation.getDeleted());
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void rolePermissionIdsIncludeDisabledButNotDeletedRelations() {
+        UserService userService = new UserService(sysUserMapper, sysUserRoleMapper, sysRolePermissionMapper,
+                sysUserPermissionMapper, sysRoleMapper, sysPermissionMapper);
+        SysRole role = new SysRole();
+        role.setId(1L);
+        when(sysRoleMapper.selectById(1L)).thenReturn(role);
+        SysRolePermission assigned = new SysRolePermission();
+        assigned.setPermissionId(101L);
+        assigned.setDeleted(0);
+        SysRolePermission deleted = new SysRolePermission();
+        deleted.setPermissionId(102L);
+        deleted.setDeleted(1);
+        when(sysRolePermissionMapper.selectAllByRoleId(1L)).thenReturn(List.of(assigned, deleted));
+
+        assertEquals(List.of(101L), userService.getRolePermissionIds(1L));
+    }
+
+    @Test
+    void assignRolePermissionsRejectsNullId() {
+        UserService userService = new UserService(sysUserMapper, sysUserRoleMapper, sysRolePermissionMapper,
+                sysUserPermissionMapper, sysRoleMapper, sysPermissionMapper);
+        SysRole role = new SysRole();
+        role.setId(1L);
+        when(sysRoleMapper.selectById(1L)).thenReturn(role);
+        RolePermissionAssignRequest request = new RolePermissionAssignRequest();
+        request.setPermissionIds(Arrays.asList(101L, null));
+        BusinessException exception = assertThrows(BusinessException.class,
+                () -> userService.assignRolePermissions(1L, request));
+        assertEquals(400, exception.getCode());
+        verify(sysRolePermissionMapper, never()).insert(any(SysRolePermission.class));
+    }
+
+    @Test
+    void assignableTreeKeepsDisabledNodesAndTheirTypes() {
+        UserService userService = new UserService(sysUserMapper, sysUserRoleMapper, sysRolePermissionMapper,
+                sysUserPermissionMapper, sysRoleMapper, sysPermissionMapper);
+        SysPermission root = new SysPermission();
+        root.setId(1L);
+        root.setPermissionName("系统管理");
+        root.setPermissionType(1);
+        root.setStatus(1);
+        SysPermission child = new SysPermission();
+        child.setId(2L);
+        child.setParentId(1L);
+        child.setPermissionName("旧授权");
+        child.setPermissionType(2);
+        child.setStatus(0);
+        when(sysPermissionMapper.selectList(any(LambdaQueryWrapper.class))).thenReturn(List.of(root, child));
+
+        var tree = userService.getAssignablePermissionTree();
+        assertEquals(1, tree.size());
+        assertEquals(2L, tree.get(0).getChildren().get(0).getId());
+        assertEquals(0, tree.get(0).getChildren().get(0).getStatus());
+        assertEquals(2, tree.get(0).getChildren().get(0).getPermissionType());
+    }
 
     @Test
     void createRoleRejectsRoleCodeUsedBySoftDeletedRow() {
@@ -186,7 +312,7 @@ class UserServiceTest {
         userService.assignRolePermissions(1L, request);
 
         verify(sysRolePermissionMapper, never()).delete(any(LambdaQueryWrapper.class));
-        verify(sysRolePermissionMapper, times(1)).updateById(any(SysRolePermission.class));
+        verify(sysRolePermissionMapper, times(1)).restoreById(10L);
         verify(sysRolePermissionMapper, never()).insert(any(SysRolePermission.class));
     }
 

@@ -2,9 +2,11 @@
   <div class="basic-data-select">
     <el-select :value="value" :placeholder="placeholder" :disabled="disabled" :loading="loading" filterable remote clearable
                :remote-method="search" :no-data-text="error || '暂无可选资料'" @change="change" @visible-change="onVisible">
-      <el-option v-for="option in displayOptions" :key="option.id" :value="option.id" :label="option.name"
+      <el-option v-for="option in displayOptions" :key="option.id" :value="option.id" :label="option.name" :class="{ 'product-option': showImage && resource === 'products' }"
                  :disabled="option.historical || option.status === 0">
+        <ProductImage v-if="showImage && resource === 'products' && !option.historical" :product-id="option.id" :has-image="option.hasImage" :legacy-url="option.imageUrl || ''" :image-version="option.imageVersion || ''" :size="36" />
         <span>{{ option.name }}</span><span v-if="option.code" class="code">{{ option.code }}</span>
+        <span v-if="showImage && option.spec" class="code">{{ option.spec }}</span>
         <span v-if="option.historical" class="code">历史资料</span>
       </el-option>
     </el-select>
@@ -14,9 +16,11 @@
 
 <script>
 import { getBasicOptions, getProductUnits } from '@/api/basic'
+import ProductImage from '@/components/ProductImage'
 
 export default {
   name: 'BasicDataSelect',
+  components: { ProductImage },
   props: {
     value: { type: [Number, String], default: undefined },
     resource: { type: String, required: true },
@@ -24,7 +28,8 @@ export default {
     params: { type: Object, default: () => ({}) },
     selectedLabel: { type: String, default: '' },
     placeholder: { type: String, default: '请选择，可输入关键词搜索' },
-    disabled: Boolean
+    disabled: Boolean,
+    showImage: Boolean
   },
   data: () => ({ options: [], loading: false, error: '', requestId: 0, keyword: '', selectedOption: null }),
   computed: {
@@ -77,5 +82,7 @@ export default {
 <style scoped>
 .basic-data-select, .el-select { width: 100%; }
 .code { color: #909399; margin-left: 12px; font-size: 12px; }
+.product-option { height: 48px; line-height: 48px; }
+.product-option .product-image { margin-right: 8px; }
 .error { display: block; color: #f56c6c; font-size: 12px; line-height: 18px; }
 </style>

@@ -25,7 +25,7 @@ public class ExcelExportService {
 
     public byte[] exportProducts(ProductQueryRequest request) {
         return export("products", basicDataService == null ? List.of() : basicDataService.exportProducts(request),
-                List.of("商品编码", "商品名称", "分类", "品牌", "规格", "条码", "基础单位", "保质期天数", "状态", "备注", "创建时间", "更新时间"));
+                List.of("商品编码", "商品名称", "分类", "品牌", "规格", "条码", "基础单位", "默认售价", "保质期天数", "状态", "备注", "创建时间", "更新时间"));
     }
 
     public byte[] exportBasic(String resourceName, BasicQueryRequest request) {

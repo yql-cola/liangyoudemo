@@ -4,7 +4,9 @@ import { getBasicOptions, getProductUnits } from '@/api/basic'
 
 jest.mock('@/api/basic', () => ({ getBasicOptions: jest.fn(), getProductUnits: jest.fn() }))
 const flush = async () => { await Promise.resolve(); await Promise.resolve() }
-const mount = propsData => shallowMount(BasicDataSelect, { propsData, stubs: ['el-select', 'el-option'] })
+const mount = propsData => shallowMount(BasicDataSelect, { propsData, stubs: {
+  'el-select': { template: '<div><slot /></div>' }, 'el-option': { template: '<div><slot /></div>' }
+} })
 
 describe('BasicDataSelect', () => {
   beforeEach(() => { getBasicOptions.mockReset(); getProductUnits.mockReset() })
@@ -33,6 +35,12 @@ describe('BasicDataSelect', () => {
     expect(getProductUnits).toHaveBeenCalledWith(5, expect.any(Object))
     await wrapper.setProps({ productId: undefined }); await flush()
     expect(wrapper.vm.options).toEqual([])
+  })
+  test('shows product thumbnail when sale entry requests image options', async () => {
+    getBasicOptions.mockResolvedValue([{ id: 2, name: '大米', hasImage: true }])
+    const wrapper = mount({ resource: 'products', showImage: true })
+    await flush(); await wrapper.vm.$nextTick()
+    expect(wrapper.findComponent({ name: 'ProductImage' }).exists()).toBe(true)
   })
 })
 

@@ -23,6 +23,12 @@ class BasicImportServiceTest {
         }
     }
 
+    @Test void productTemplateOffersDefaultPriceWithoutBreakingOldHeader() throws Exception {
+        try (XSSFWorkbook book = new XSSFWorkbook(new java.io.ByteArrayInputStream(service.template("products")))) {
+            assertEquals("默认售价", book.getSheetAt(0).getRow(0).getCell(11).getStringCellValue());
+        }
+    }
+
     @Test void duplicateCodesInOneFileRejectEntireBatchBeforeWriting() throws Exception {
         var result = service.importFile("units", file("单位编码", "单位名称", "状态", "备注",
                 List.of("U01", "袋", "启用", ""), List.of("U01", "箱", "启用", "")));

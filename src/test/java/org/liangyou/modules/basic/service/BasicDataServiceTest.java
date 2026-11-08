@@ -34,7 +34,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -111,6 +113,28 @@ class BasicDataServiceTest {
         assertEquals("P001", options.get(0).getCode());
         assertEquals("东北大米", options.get(0).getName());
         assertEquals(1, options.get(0).getStatus());
+    }
+
+    @Test
+    void productOptionsExposeDefaultPriceForSaleEntry() {
+        BaseProduct product = new BaseProduct();
+        product.setId(1L); product.setProductCode("P001"); product.setProductName("大米");
+        product.setStatus(1); product.setCategoryId(2L); product.setBaseUnitId(3L);
+        org.springframework.test.util.ReflectionTestUtils.setField(product, "defaultSalePrice", new BigDecimal("12.5000"));
+        when(categoryMapper.selectById(2L)).thenReturn(category(2L, 0L, 1));
+        BaseUnit unit = new BaseUnit(); unit.setId(3L); unit.setStatus(1);
+        when(unitMapper.selectById(3L)).thenReturn(unit);
+        when(baseProductMapper.selectList(any())).thenReturn(List.of(product));
+
+        BasicOptionResponse option = service().productOptions(null).get(0);
+
+        assertEquals("12.5000", org.springframework.test.util.ReflectionTestUtils.getField(option, "defaultSalePrice").toString());
+        product.setImageObjectKey("products/1/first.png");
+        BasicOptionResponse firstImage = service().productOptions(null).get(0);
+        product.setImageObjectKey("products/1/second.png");
+        BasicOptionResponse secondImage = service().productOptions(null).get(0);
+        assertTrue(firstImage.isHasImage());
+        assertNotEquals(firstImage.getImageVersion(), secondImage.getImageVersion());
     }
 
     @Test

@@ -24,3 +24,14 @@ export function createBasicApi(resource) {
 export const getBasicOptions = (resource, params) => createBasicApi(resource).options(params)
 export const getCategoryTree = params => request({ url: '/v1/basic/categories/tree', method: 'get', params })
 export const getProductUnits = (productId, params) => request({ url: `/v1/basic/products/${productId}/units`, method: 'get', params })
+
+export const uploadProductImage = (productId, file) => {
+  const data = new FormData()
+  data.append('file', file)
+  return request({ url: `/v1/basic/products/${productId}/image`, method: 'post', data })
+}
+export const deleteProductImage = productId => request({ url: `/v1/basic/products/${productId}/image`, method: 'delete' })
+export const getProductImage = (productId, thumbnail = true, version = '') => request({
+  url: `/v1/basic/products/${productId}/${thumbnail ? 'thumbnail' : 'image'}`, method: 'get',
+  params: { v: version }, responseType: 'blob'
+}).then(response => response.data)

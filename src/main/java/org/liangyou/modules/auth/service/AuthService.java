@@ -1,6 +1,7 @@
 package org.liangyou.modules.auth.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.liangyou.common.exception.BusinessException;
 import org.liangyou.modules.auth.dto.LoginRequest;
 import org.liangyou.modules.auth.vo.CurrentUserResponse;
@@ -19,6 +20,7 @@ import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AuthService {
 
     private final UserService userService;
@@ -42,6 +44,7 @@ public class AuthService {
                 loginAuthorities.getRoles(),
                 loginAuthorities.getPermissions());
         String token = jwtTokenService.issueToken(principal);
+        log.info("用户登录成功 userId={} superAdmin={}", user.getId(), principal.getRoles().contains("SUPER_ADMIN"));
         return toLoginResponse(token, principal);
     }
 
@@ -50,7 +53,11 @@ public class AuthService {
         if (authentication == null || !(authentication.getPrincipal() instanceof AuthenticatedUserPrincipal principal)) {
             throw new BusinessException(401, "未登录或 Token 无效");
         }
-        return toCurrentUserResponse(principal);
+        CurrentUserResponse response = toCurrentUserResponse(principal);
+        if (principal.getRoles().contains("SUPER_ADMIN")) {
+            response.setPermissions(userService.loadActivePermissionCodes());
+        }
+        return response;
     }
 
     public void logout(String authorizationHeader) {
@@ -71,6 +78,7 @@ public class AuthService {
                 jwtTokenService.buildRevokedTokenKey(token),
                 "revoked",
                 java.time.Duration.ofSeconds(remainingTtlSeconds));
+        log.info("用户注销成功，JWT 已撤销");
     }
 
     private LoginResponse toLoginResponse(String token, AuthenticatedUserPrincipal principal) {

@@ -35,10 +35,10 @@
         <el-form-item label="备注"><el-input v-model.trim="form.remark" maxlength="255" /></el-form-item>
         <div class="item-head"><h3>商品明细</h3><el-button size="small" @click="addItem">新增商品</el-button></div>
         <el-table :data="form.items" border>
-          <el-table-column label="商品" min-width="205"><template slot-scope="{ row }"><BasicDataSelect v-model="row.productId" resource="products" :selected-label="row.productName" @change="(id, option) => productChanged(row, option)" /><small>{{ row.spec || '' }}</small></template></el-table-column>
+          <el-table-column label="商品" min-width="225"><template slot-scope="{ row }"><div class="product-cell"><ProductImage v-if="row.productId" :product-id="row.productId" :has-image="!!row.hasImage" :legacy-url="row.imageUrl || ''" :image-version="row.imageVersion || ''" :size="32" preview /><div><BasicDataSelect v-model="row.productId" resource="products" :selected-label="row.productName" show-image @change="(id, option) => productChanged(row, option)" /></div></div></template></el-table-column>
           <el-table-column label="单位" min-width="145"><template slot-scope="{ row }"><BasicDataSelect v-model="row.unitId" resource="product-units" :product-id="row.productId" :selected-label="row.unitName" @change="(id, option) => unitChanged(row, option)" /></template></el-table-column>
           <el-table-column label="数量" width="135"><template slot-scope="{ row }"><el-input-number v-model="row.qty" :min="0.0001" :precision="4" controls-position="right" /></template></el-table-column>
-          <el-table-column label="单价" width="135"><template slot-scope="{ row }"><el-input-number v-model="row.unitPrice" :min="0" :precision="4" controls-position="right" /></template></el-table-column>
+          <el-table-column label="单价" width="150"><template slot-scope="{ row }"><el-input-number v-model="row.unitPrice" :min="0" :precision="4" controls-position="right" @change="priceChanged(row)" /></template></el-table-column>
           <el-table-column label="金额" width="105"><template slot-scope="{ row }">{{ (Number(row.qty || 0) * Number(row.unitPrice || 0)).toFixed(2) }}</template></el-table-column>
           <el-table-column label="可售 / 所需基础数量" width="170"><template slot-scope="{ row }">{{ row.availableQty == null ? '—' : row.availableQty }} / {{ row.convertRate ? (Number(row.qty) * Number(row.convertRate)).toFixed(4) : '—' }}</template></el-table-column>
           <el-table-column label="备注" min-width="120"><template slot-scope="{ row }"><el-input v-model.trim="row.remark" maxlength="255" /></template></el-table-column>
@@ -57,11 +57,12 @@
 </template>
 <script>
 import BasicDataSelect from '@/components/BasicDataSelect'
+import ProductImage from '@/components/ProductImage'
 import { listInventory } from '@/api/inventory/inventory'
 import { getSaleOut, addSaleOut, updateSaleOut, saleAction, searchCustomers, quickCustomer } from '@/api/sale/saleOut'
-import { blankSaleOrder, validateSaleOrder, salePayload, totalAmount, copySaleOrder } from './saleOrderForm'
+import { blankSaleOrder, validateSaleOrder, salePayload, totalAmount, copySaleOrder, defaultUnitPrice } from './saleOrderForm'
 export default {
-  name: 'SaleOrderEditor', components: { BasicDataSelect },
+  name: 'SaleOrderEditor', components: { BasicDataSelect, ProductImage },
   data: () => ({ form: blankSaleOrder(), customerMode: 'guest', customers: [], duplicates: [], quickVisible: false,
     quick: { customerName: '', contactName: '', contactPhone: '', address: '' }, loading: false, saving: false, error: '' }),
   computed: { amount() { return totalAmount(this.form.items) } },
@@ -72,14 +73,14 @@ export default {
     this.loading = true
     try {
       const order = await getSaleOut(id)
-      this.form = { ...(copy ? copySaleOrder(order) : { ...blankSaleOrder(), ...order }), items: order.items.map(item => ({ ...item, id: copy ? undefined : item.id, availableQty: null, convertRate: item.baseQty && item.qty ? Number(item.baseQty) / Number(item.qty) : 1 })) }
+      this.form = { ...(copy ? copySaleOrder(order) : { ...blankSaleOrder(), ...order }), items: order.items.map(item => ({ ...item, id: copy ? undefined : item.id, availableQty: null, convertRate: item.baseQty && item.qty ? Number(item.baseQty) / Number(item.qty) : 1, priceMode: 'manual', autoUnitPrice: null, defaultSalePrice: null, hasImage: false, imageUrl: '' })) }
       this.customerMode = order.customerId ? 'registered' : 'guest'
       if (order.customerId) this.customers = [{ id: order.customerId, customerName: order.customerName, contactPhone: order.contactPhone }]
       this.refreshAvailability()
     } catch (e) { this.error = e.message || '订单加载失败' } finally { this.loading = false }
   },
   methods: {
-    addItem() { this.form.items.push({ productId: null, unitId: null, qty: 1, unitPrice: 0, remark: '', availableQty: null, convertRate: 1 }) },
+    addItem() { this.form.items.push({ productId: null, unitId: null, qty: 1, unitPrice: null, remark: '', availableQty: null, convertRate: 1, priceMode: 'auto', autoUnitPrice: null, defaultSalePrice: null, hasImage: false, imageUrl: '', imageVersion: '' }) },
     modeChanged(mode) { if (mode === 'guest') { Object.assign(this.form, { customerId: null, customerName: '散客', contactName: '', contactPhone: '', deliveryAddress: '' }) } else this.findCustomers('') },
     async findCustomers(keyword) { try { this.customers = await searchCustomers(keyword || '') } catch (e) { this.error = e.message } },
     customerChanged(id) {
@@ -100,9 +101,21 @@ export default {
     productChanged(row, option) {
       row.productName = option ? option.name : ''; row.spec = option ? option.spec : ''
       row.unitId = option ? option.baseUnitId : null; row.unitName = option ? option.baseUnitName : ''
-      row.convertRate = 1; this.refreshAvailability()
+      row.hasImage = option ? !!option.hasImage : false; row.imageUrl = option ? option.imageUrl || '' : ''
+      row.imageVersion = option ? option.imageVersion || '' : ''
+      row.convertRate = 1; row.defaultSalePrice = option ? option.defaultSalePrice : null
+      row.priceMode = 'auto'; row.autoUnitPrice = defaultUnitPrice(row.defaultSalePrice, 1)
+      row.unitPrice = row.autoUnitPrice
+      this.refreshAvailability()
     },
-    unitChanged(row, option) { row.unitName = option ? option.name : ''; row.convertRate = option ? Number(option.convertRate || 1) : 1 },
+    priceChanged(row) {
+      if (row.autoUnitPrice == null || Number(row.unitPrice) !== Number(row.autoUnitPrice)) row.priceMode = 'manual'
+    },
+    unitChanged(row, option) {
+      row.unitName = option ? option.name : ''; row.convertRate = option ? Number(option.convertRate || 1) : 1
+      row.autoUnitPrice = defaultUnitPrice(row.defaultSalePrice, row.convertRate)
+      if (row.priceMode === 'auto') row.unitPrice = row.autoUnitPrice
+    },
     async refreshAvailability() {
       if (!this.form.warehouseId) return
       await Promise.all(this.form.items.filter(row => row.productId).map(async row => {
@@ -134,4 +147,7 @@ export default {
 .item-head, .actions { display: flex; justify-content: space-between; align-items: center; margin: 12px 0; }
 .total { text-align: right; font-size: 18px; font-weight: bold; }
 .el-dialog .el-input { margin: 5px 0; }
+.product-cell { display: flex; align-items: center; gap: 8px; }
+.product-cell > div { min-width: 0; flex: 1; }
+.sale-editor .el-input-number { width: 100%; }
 </style>

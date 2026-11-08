@@ -30,7 +30,7 @@ public class BasicImportService {
     private static final long MAX_BYTES = 5L * 1024 * 1024;
     private static final int MAX_ROWS = 2000;
     private static final Map<String, List<String>> HEADERS = Map.of(
-            "products", List.of("商品编码", "商品名称", "分类", "品牌", "规格", "条码", "图片地址", "基础单位", "保质期天数", "状态", "备注"),
+            "products", List.of("商品编码", "商品名称", "分类", "品牌", "规格", "条码", "图片地址", "基础单位", "保质期天数", "状态", "备注", "默认售价"),
             "categories", List.of("分类名称", "父分类", "排序", "状态", "备注"),
             "units", List.of("单位编码", "单位名称", "状态", "备注"),
             "unit-converts", List.of("商品编码", "源单位编码", "目标单位编码", "换算比率", "状态", "备注"),
@@ -41,7 +41,7 @@ public class BasicImportService {
             Map.entry("productCode", "商品编码"), Map.entry("productName", "商品名称"),
             Map.entry("categoryId", "分类"), Map.entry("baseUnitId", "基础单位"),
             Map.entry("brandName", "品牌"), Map.entry("spec", "规格"), Map.entry("barcode", "条码"),
-            Map.entry("imageUrl", "图片地址"), Map.entry("shelfLifeDays", "保质期天数"),
+            Map.entry("imageUrl", "图片地址"), Map.entry("shelfLifeDays", "保质期天数"), Map.entry("defaultSalePrice", "默认售价"),
             Map.entry("categoryName", "分类名称"), Map.entry("parentId", "父分类"), Map.entry("sortNo", "排序"),
             Map.entry("unitCode", "单位编码"), Map.entry("unitName", "单位名称"),
             Map.entry("warehouseCode", "仓库编码"), Map.entry("warehouseName", "仓库名称"),
@@ -187,6 +187,14 @@ public class BasicImportService {
                     errors.add(new ImportError(row.number(), "换算比率", "换算比率必须为正数，最多六位小数"));
             } catch (NumberFormatException ex) { errors.add(new ImportError(row.number(), "换算比率", "换算比率必须是数字")); }
         }
+        String price = values.get("默认售价");
+        if (price != null && !price.isBlank()) {
+            try {
+                BigDecimal amount = new BigDecimal(price);
+                if (amount.signum() < 0 || amount.scale() > 4 || amount.precision() - amount.scale() > 14)
+                    errors.add(new ImportError(row.number(), "默认售价", "默认售价必须为非负数，最多四位小数"));
+            } catch (NumberFormatException ex) { errors.add(new ImportError(row.number(), "默认售价", "默认售价必须是数字")); }
+        }
     }
 
     private List<SheetRow> read(MultipartFile file, List<String> headers) {
@@ -196,10 +204,14 @@ public class BasicImportService {
             var sheet = book.getSheetAt(0);
             DataFormatter formatter = new DataFormatter(Locale.CHINA);
             Row head = sheet.getRow(0);
-            for (int i = 0; i < headers.size(); i++)
+            // The price column was appended, so legacy product templates remain importable.
+            int columnCount = head == null ? 0 : head.getLastCellNum();
+            boolean legacyProduct = headers.size() == 12 && columnCount == 11 && "默认售价".equals(headers.get(11));
+            int expectedCount = legacyProduct ? 11 : headers.size();
+            for (int i = 0; i < expectedCount; i++)
                 if (head == null || !headers.get(i).equals(value(head.getCell(i), formatter)))
                     throw new BusinessException(400, "表头或列顺序不符，请使用下载的导入模板");
-            if (head.getLastCellNum() > headers.size()) throw new BusinessException(400, "表格含有模板外的列");
+            if (columnCount > headers.size()) throw new BusinessException(400, "表格含有模板外的列");
             List<SheetRow> rows = new ArrayList<>();
             for (int index = 1; index <= sheet.getLastRowNum(); index++) {
                 Row excelRow = sheet.getRow(index);
@@ -251,6 +263,8 @@ public class BasicImportService {
                 request.setBaseUnitId(optionId(data.unitOptions(null), row.get("基础单位"), "基础单位"));
                 request.setBrandName(row.get("品牌")); request.setSpec(row.get("规格"));
                 request.setBarcode(row.get("条码")); request.setImageUrl(row.get("图片地址"));
+                String price = row.get("默认售价");
+                if (price != null && !price.isBlank()) request.setDefaultSalePrice(new BigDecimal(price));
                 request.setShelfLifeDays(integer(row.get("保质期天数"), "保质期天数"));
                 request.setStatus(status); request.setRemark(row.get("备注")); validate(request); data.createProduct(request);
             }

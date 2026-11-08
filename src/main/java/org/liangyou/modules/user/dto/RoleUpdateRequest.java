@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import java.util.List;
 
 @Data
 @Schema(description = "修改角色请求")
@@ -23,4 +24,7 @@ public class RoleUpdateRequest {
 
     @Schema(description = "备注", example = "仓库角色")
     private String remark;
+
+    @Schema(description = "可选的权限 ID；不传保留原授权，空数组清空授权")
+    private List<Long> permissionIds;
 }

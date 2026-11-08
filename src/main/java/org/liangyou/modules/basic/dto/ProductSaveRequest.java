@@ -7,6 +7,9 @@ import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Digits;
+import java.math.BigDecimal;
 
 @Data
 public class ProductSaveRequest {
@@ -28,6 +31,9 @@ public class ProductSaveRequest {
     private String barcode;
     @Size(max = 255, message = "imageUrl-too-long")
     private String imageUrl;
+    @DecimalMin(value = "0", message = "default-sale-price-invalid")
+    @Digits(integer = 14, fraction = 4, message = "default-sale-price-invalid")
+    private BigDecimal defaultSalePrice;
     @NotNull(message = "unit-id-required")
     @Positive(message = "baseUnitId-invalid")
     private Long baseUnitId;

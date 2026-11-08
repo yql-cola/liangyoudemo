@@ -16,10 +16,11 @@ export const basicSchemas = {
     key: 'product', resource: 'products', title: '商品',
     fields: [text('productCode', '商品编码', true, 64), text('productName', '商品名称', true),
       select('categoryId', '商品分类', 'categories', 'categoryName'), text('brandName', '品牌', false, 64), text('spec', '规格'), text('barcode', '条码', false, 64),
-      text('imageUrl', '图片地址', false, 255), select('baseUnitId', '基础单位', 'units', 'baseUnitName'),
+      select('baseUnitId', '基础单位', 'units', 'baseUnitName'),
+      { ...number('defaultSalePrice', '基础单位默认售价'), precision: 4 },
       number('shelfLifeDays', '保质期（天）'), ...statusRemark],
     filters: [select('categoryId', '分类', 'categories')],
-    columns: [['productCode', '商品编码'], ['productName', '商品名称'], ['categoryName', '分类'], ['brandName', '品牌'], ['spec', '规格'], ['baseUnitName', '基础单位']]
+    columns: [['productCode', '商品编码'], ['productName', '商品名称'], ['categoryName', '分类'], ['brandName', '品牌'], ['spec', '规格'], ['baseUnitName', '基础单位'], ['defaultSalePrice', '默认售价']]
   },
   category: {
     key: 'category', resource: 'categories', title: '分类', tree: true,

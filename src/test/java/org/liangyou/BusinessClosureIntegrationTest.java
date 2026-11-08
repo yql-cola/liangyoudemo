@@ -68,6 +68,9 @@ class BusinessClosureIntegrationTest {
         try (var connection = jdbc.getDataSource().getConnection()) {
             ScriptUtils.executeSqlScript(connection, new ByteArrayResource(ddl.getBytes(StandardCharsets.UTF_8)));
         }
+        // 测试仅加载初始化脚本的旧 DDL 段，显式补齐末尾追加的商品字段。
+        jdbc.execute("ALTER TABLE base_product ADD COLUMN default_sale_price DECIMAL(18,4)");
+        jdbc.execute("ALTER TABLE base_product ADD COLUMN image_object_key VARCHAR(255)");
         jdbc.update("INSERT INTO sys_warehouse(id,warehouse_code,warehouse_name) VALUES(1,'W1','总仓'),(2,'W2','分仓')");
         jdbc.update("INSERT INTO base_unit(id,unit_code,unit_name) VALUES(1,'BAG','袋'),(2,'BOX','箱')");
         jdbc.update("INSERT INTO base_product_category(id,category_name) VALUES(1,'粮食')");

@@ -61,6 +61,14 @@ class ResourcePermissionAuthorizationManagerTest {
         assertFalse(granted(user(), "GET", "/api/v1/basic/products/options"));
     }
 
+    @Test void saleEntryCanReadProductImagesButOnlyProductEditorCanChangeThem() {
+        assertTrue(granted(user("sale:order:create"), "GET", "/api/v1/basic/products/2/thumbnail"));
+        assertTrue(granted(user("sale:order:view"), "GET", "/api/v1/basic/products/2/image"));
+        assertFalse(granted(user("sale:order:create"), "POST", "/api/v1/basic/products/2/image"));
+        assertTrue(granted(user("basic:product:update"), "POST", "/api/v1/basic/products/2/image"));
+        assertTrue(granted(user("basic:product:update"), "DELETE", "/api/v1/basic/products/2/image"));
+    }
+
     @Test void categoryTreeRequiresListPermission() {
         assertTrue(granted(user("basic:category:list"), "GET", "/api/v1/basic/categories/tree"));
         assertFalse(granted(user("basic:unit:list"), "GET", "/api/v1/basic/categories/tree"));
@@ -131,6 +139,10 @@ class ResourcePermissionAuthorizationManagerTest {
     }
 
     @Test void systemGrantsRequireExactDocumentedPermissions() {
+        assertTrue(granted(user("system:role:grant"), "GET", "/api/v1/roles/assignable-permissions"));
+        assertTrue(granted(user("system:role:grant"), "GET", "/api/v1/roles/2/permissions"));
+        assertFalse(granted(user("system:role:list"), "GET", "/api/v1/roles/assignable-permissions"));
+        assertFalse(granted(user("system:role:update"), "GET", "/api/v1/roles/2/permissions"));
         assertTrue(granted(user("system:user:grant-role"), "POST", "/api/v1/users/2/roles"));
         assertTrue(granted(user("system:user:grant-permission"), "POST", "/api/v1/users/2/permissions"));
         assertTrue(granted(user("system:user:view-permission"), "GET", "/api/v1/users/2/permissions"));

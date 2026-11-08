@@ -27,6 +27,7 @@
       <el-alert v-if="error" :title="error" type="error" show-icon :closable="false" class="error-banner" />
       <el-table ref="dataTable" v-loading="loading" :data="list" row-key="id" border :default-expand-all="schema.tree" :tree-props="{ children: 'children' }" empty-text="暂无资料" @selection-change="onSelectionChange">
         <el-table-column type="selection" width="50" reserve-selection />
+        <el-table-column v-if="schema.key === 'product'" label="图片" width="76"><template slot-scope="{ row }"><ProductImage :product-id="row.id" :has-image="!!row.hasImage" :legacy-url="row.imageUrl || ''" :image-version="row.imageVersion || ''" preview /></template></el-table-column>
         <el-table-column v-for="column in schema.columns" :key="column[0]" :prop="column[0]" :label="column[1]" min-width="120" show-overflow-tooltip />
         <el-table-column label="状态" width="85"><template slot-scope="{ row }"><el-tag :type="row.status === 1 ? 'success' : 'info'">{{ row.status === 1 ? '启用' : '停用' }}</el-tag></template></el-table-column>
         <el-table-column label="操作" :width="schema.tree ? 410 : 290" fixed="right">
@@ -80,6 +81,16 @@
             </el-form-item>
           </el-col>
         </el-row>
+        <div v-if="schema.key === 'product'" class="product-image-editor">
+          <label>商品主图</label>
+          <ProductImage v-if="form.id && (form.hasImage || form.imageUrl)" :product-id="form.id" :has-image="!!form.hasImage" :legacy-url="form.imageUrl || ''" :image-version="form.imageVersion || ''" :size="72" preview />
+          <img v-if="selectedImageUrl" :src="selectedImageUrl" alt="待上传商品图片" class="selected-image">
+          <span v-if="!form.hasImage && !form.imageUrl && !selectedImageUrl">暂无图片</span>
+          <input v-if="!readOnly && canUploadImage" ref="productImageInput" type="file" accept="image/jpeg,image/png" :disabled="saving" @change="chooseProductImage">
+          <el-button v-if="!readOnly && canUploadImage && form.id && (form.hasImage || form.imageUrl)" type="text" class="danger" :disabled="saving" @click="removeProductImage">删除图片</el-button>
+          <small v-if="!canUploadImage && !readOnly">上传图片需要商品编辑权限</small>
+          <small>支持 JPG、PNG，单张不超过 2 MB</small>
+        </div>
       </el-form>
       <span slot="footer"><el-button :disabled="saving" @click="dialogVisible = false">{{ readOnly ? '关闭' : '取消' }}</el-button><el-button v-if="!readOnly" type="primary" :loading="saving" :disabled="detailLoading" @click="save">保存</el-button></span>
     </el-dialog>
@@ -87,22 +98,24 @@
 </template>
 
 <script>
-import { createBasicApi, getCategoryTree } from '@/api/basic'
+import { createBasicApi, getCategoryTree, uploadProductImage, deleteProductImage } from '@/api/basic'
 import { downloadFile } from '@/utils/download'
 import BasicDataSelect from '@/components/BasicDataSelect'
 import Pagination from '@/components/Pagination'
+import ProductImage from '@/components/ProductImage'
 import { categoryParentOptions, filterCategoryTree } from './categoryTree'
 import { hasPermission } from '@/utils/permission'
 
 export default {
   name: 'BasicDataPage',
-  components: { BasicDataSelect, Pagination },
+  components: { BasicDataSelect, Pagination, ProductImage },
   props: { schema: { type: Object, required: true } },
   data() {
     return { query: { pageNum: 1, pageSize: 10, keyword: '', status: undefined }, list: [], total: 0, loading: false,
       exporting: false, selectedIds: [], templateLoading: false, importVisible: false, importing: false, importFile: null, importErrors: [], importMessage: '', importResultType: 'success',
       error: '', formError: '', dialogVisible: false, readOnly: false, saving: false, detailLoading: false,
-      form: {}, originalStatus: null, categoryTree: [], busyId: null, loadId: 0, detailId: 0 }
+      form: {}, originalStatus: null, categoryTree: [], busyId: null, loadId: 0, detailId: 0,
+      productImageFile: null, selectedImageUrl: '' }
   },
   computed: {
     api() { return createBasicApi(this.schema.resource) },
@@ -110,6 +123,7 @@ export default {
     canImport() { return ['import', 'create'].some(action => hasPermission(this.$store.state.user.permissions, this.permission(action))) },
     // Editing loads full detail, so both operation permissions are required.
     canEdit() { return ['update', 'view'].every(action => hasPermission(this.$store.state.user.permissions, this.permission(action))) },
+    canUploadImage() { return this.schema.key === 'product' && hasPermission(this.$store.state.user.permissions, this.permission('update')) },
     canChangeFormStatus() { return !this.form.id || hasPermission(this.$store.state.user.permissions, this.permission('status')) },
     parentOptions() { return categoryParentOptions(this.categoryTree, this.form.id) },
     rules() {
@@ -126,7 +140,7 @@ export default {
     }
   },
   created() { this.load() },
-  beforeDestroy() { this.loadId++; this.detailId++ },
+  beforeDestroy() { this.loadId++; this.detailId++; this.clearSelectedImage() },
   methods: {
     permission(action) { return `basic:${this.schema.key}:${action}` },
     filters() {
@@ -203,6 +217,7 @@ export default {
     },
     async open(row, mode = 'edit', parentId = 0) {
       const id = ++this.detailId
+      this.clearSelectedImage()
       this.originalStatus = null; this.readOnly = mode === 'view'; this.formError = ''; this.form = this.newForm(parentId)
       this.dialogVisible = true; this.detailLoading = true
       this.$nextTick(() => this.$refs.form && this.$refs.form.clearValidate())
@@ -216,7 +231,33 @@ export default {
       } catch (e) { if (id === this.detailId) { this.formError = e.message || '详情加载失败'; this.readOnly = true } }
       finally { if (id === this.detailId) this.detailLoading = false }
     },
-    closeDialog(done) { if (!this.saving) { this.detailId++; done() } },
+    closeDialog(done) { if (!this.saving) { this.detailId++; this.clearSelectedImage(); done() } },
+    clearSelectedImage() {
+      if (this.selectedImageUrl) URL.revokeObjectURL(this.selectedImageUrl)
+      this.selectedImageUrl = ''; this.productImageFile = null
+    },
+    chooseProductImage(event) {
+      const file = event.target.files && event.target.files[0]
+      // 允许在校验失败或上传失败后重新选择同一个文件。
+      event.target.value = ''
+      this.clearSelectedImage(); this.formError = ''
+      if (!file) return
+      if (!['image/jpeg', 'image/png'].includes(file.type) || file.size > 2 * 1024 * 1024) {
+        this.formError = '请选择不超过 2 MB 的 JPG 或 PNG 图片'; return
+      }
+      this.productImageFile = file
+      if (URL.createObjectURL) this.selectedImageUrl = URL.createObjectURL(file)
+    },
+    async removeProductImage() {
+      if (!this.form.id || this.saving) return
+      this.saving = true; this.formError = ''
+      try {
+        await deleteProductImage(this.form.id)
+        this.form.hasImage = false; this.form.imageUrl = ''; this.form.imageVersion = String(Date.now())
+        this.clearSelectedImage(); await this.load(); this.$message.success('图片已删除')
+      } catch (e) { this.formError = e.message || '删除图片失败' }
+      finally { this.saving = false }
+    },
     async save() {
       if (this.saving || this.detailLoading || this.readOnly) return
       this.saving = true; this.formError = ''
@@ -233,7 +274,15 @@ export default {
           return data
         }, {})
         if (this.form.id) await this.api.update(this.form.id, payload)
-        else await this.api.create(payload)
+        else { const created = await this.api.create(payload); this.form.id = created.id }
+        if (this.schema.key === 'product' && this.productImageFile) {
+          try { await uploadProductImage(this.form.id, this.productImageFile) } catch (e) {
+            this.formError = `商品资料已保存，图片上传失败：${e.message || '请重试'}`
+            await this.load()
+            return
+          }
+          this.clearSelectedImage()
+        }
         this.dialogVisible = false; this.$message.success('保存成功'); await this.load()
       } catch (e) { this.formError = e.message || '保存失败，请重试' }
       finally { this.saving = false }
@@ -300,5 +349,9 @@ export default {
 .error-banner { margin-bottom: 16px; }
 .danger { color: #f56c6c; }
 .permission-hint { color: #909399; font-size: 12px; }
+.product-image-editor { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin: 10px 0 0 110px; color: #606266; }
+.product-image-editor label { width: 80px; }
+.product-image-editor small { color: #909399; }
+.selected-image { width: 72px; height: 72px; object-fit: contain; border-radius: 4px; }
 .el-select, .el-input-number { width: 100%; }
 </style>

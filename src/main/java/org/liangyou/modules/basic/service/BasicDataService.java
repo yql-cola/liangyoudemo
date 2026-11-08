@@ -626,6 +626,10 @@ public class BasicDataService {
         response.setBaseUnitName(detail.getBaseUnitName());
         response.setSpec(product.getSpec());
         response.setBrandName(product.getBrandName());
+        response.setDefaultSalePrice(product.getDefaultSalePrice());
+        response.setImageUrl(product.getImageUrl());
+        response.setHasImage(StringUtils.hasText(product.getImageObjectKey()));
+        response.setImageVersion(imageVersion(product));
         return response;
     }
 
@@ -636,10 +640,18 @@ public class BasicDataService {
         product.setBrandName(request.getBrandName());
         product.setSpec(request.getSpec());
         product.setBarcode(request.getBarcode());
-        product.setImageUrl(request.getImageUrl());
+        // Image removal has its own endpoint; ordinary product edits must preserve the current image.
+        if (request.getImageUrl() != null) product.setImageUrl(request.getImageUrl());
+        product.setDefaultSalePrice(request.getDefaultSalePrice());
         product.setBaseUnitId(request.getBaseUnitId());
         product.setShelfLifeDays(request.getShelfLifeDays());
         product.setRemark(request.getRemark());
+    }
+
+    private String imageVersion(BaseProduct product) {
+        // A new object key changes the thumbnail even when ordinary product fields were untouched.
+        return StringUtils.hasText(product.getImageObjectKey())
+                ? Integer.toHexString(product.getImageObjectKey().hashCode()) : null;
     }
 
     private ProductResponse toProductResponse(BaseProduct product) {
@@ -656,6 +668,9 @@ public class BasicDataService {
         response.setSpec(product.getSpec());
         response.setBarcode(product.getBarcode());
         response.setImageUrl(product.getImageUrl());
+        response.setHasImage(StringUtils.hasText(product.getImageObjectKey()));
+        response.setImageVersion(imageVersion(product));
+        response.setDefaultSalePrice(product.getDefaultSalePrice());
         response.setBaseUnitId(product.getBaseUnitId());
         response.setShelfLifeDays(product.getShelfLifeDays());
         response.setStatus(product.getStatus());
@@ -835,6 +850,9 @@ public class BasicDataService {
 
     private void validateProductRequest(Long id, ProductSaveRequest request) {
         validOptionalStatus(request.getStatus());
+        BigDecimal price = request.getDefaultSalePrice();
+        if (price != null && (price.signum() < 0 || price.scale() > 4 || price.precision() - price.scale() > 14))
+            throw new BusinessException(400, "default-sale-price-invalid");
         if (!StringUtils.hasText(request.getProductCode()) || !StringUtils.hasText(request.getProductName()))
             throw new BusinessException(400, "product-required");
         if (request.getShelfLifeDays() != null && request.getShelfLifeDays() < 0)
@@ -1113,7 +1131,7 @@ public class BasicDataService {
     public List<Map<String, Object>> exportProducts(ProductQueryRequest request) {
         List<Map<String, Object>> rows = exportRows(baseProductMapper.selectList(productQuery(request)).stream().map(this::toProductResponse).toList(),
                 "商品编码", "productCode", "商品名称", "productName", "分类", "categoryName", "品牌", "brandName", "规格", "spec",
-                "条码", "barcode", "基础单位", "baseUnitName", "保质期天数", "shelfLifeDays", "状态", "status", "备注", "remark",
+                "条码", "barcode", "基础单位", "baseUnitName", "默认售价", "defaultSalePrice", "保质期天数", "shelfLifeDays", "状态", "status", "备注", "remark",
                 "创建时间", "createdTime", "更新时间", "updatedTime");
         verifyExportSelection(request.getIds(), rows.size());
         return rows;

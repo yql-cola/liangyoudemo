@@ -12,8 +12,10 @@ import org.liangyou.modules.basic.dto.ProductSaveRequest;
 import org.liangyou.modules.basic.dto.StatusUpdateRequest;
 import org.liangyou.modules.basic.service.BasicDataService;
 import org.liangyou.modules.basic.service.ExcelExportService;
+import org.liangyou.modules.basic.service.ProductImageService;
 import org.liangyou.modules.basic.vo.BasicOptionResponse;
 import org.liangyou.modules.basic.vo.ProductResponse;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -27,6 +29,10 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.http.CacheControl;
+import java.time.Duration;
 
 import java.util.List;
 
@@ -39,6 +45,7 @@ public class ProductController {
 
     private final BasicDataService basicDataService;
     private final ExcelExportService excelExportService;
+    private final ProductImageService productImageService;
 
     @GetMapping
     @Operation(summary = "分页查询商品", description = "权限点：basic:product:list")
@@ -88,6 +95,36 @@ public class ProductController {
     @Operation(summary = "查询商品可用单位及到基础单位的换算倍率")
     public ApiResponse<List<BasicOptionResponse>> units(@PathVariable("id") Long id) {
         return ApiResponse.success(basicDataService.productUnitOptions(id));
+    }
+
+    @PostMapping(value = "/{id}/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "上传或替换商品主图", description = "权限点：basic:product:update")
+    public ApiResponse<Void> uploadImage(@PathVariable("id") Long id, @RequestParam("file") MultipartFile file) {
+        productImageService.upload(id, file);
+        return ApiResponse.success(null);
+    }
+
+    @DeleteMapping("/{id}/image")
+    @Operation(summary = "删除商品主图", description = "权限点：basic:product:update")
+    public ApiResponse<Void> deleteImage(@PathVariable("id") Long id) {
+        productImageService.delete(id);
+        return ApiResponse.success(null);
+    }
+
+    @GetMapping(value = "/{id}/image")
+    @Operation(summary = "读取商品主图")
+    public ResponseEntity<InputStreamResource> image(@PathVariable("id") Long id) { return imageResponse(id, false); }
+
+    @GetMapping(value = "/{id}/thumbnail")
+    @Operation(summary = "读取商品缩略图")
+    public ResponseEntity<InputStreamResource> thumbnail(@PathVariable("id") Long id) { return imageResponse(id, true); }
+
+    private ResponseEntity<InputStreamResource> imageResponse(Long id, boolean thumbnail) {
+        ProductImageService.ImageContent image = productImageService.open(id, thumbnail);
+        // Write and close the storage stream in the authenticated request, without async redispatch.
+        InputStreamResource body = new InputStreamResource(image.stream());
+        return ResponseEntity.ok().contentType(MediaType.parseMediaType(image.contentType()))
+                .cacheControl(CacheControl.maxAge(Duration.ofMinutes(10)).cachePrivate()).body(body);
     }
 
     @GetMapping("/export")
