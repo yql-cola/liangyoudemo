@@ -1,0 +1,40 @@
+name: liangyou-nacos
+
+services:
+  nacos:
+    image: nacos/nacos-server:v2.4.3-slim@sha256:db492770542f9d236f54061efd431be0c3fc90035c3e9cb9dfdc4e10c59d3501
+    restart: always
+    ports:
+      - "127.0.0.1:${NACOS_HTTP_PORT:-8848}:8848"
+      - "127.0.0.1:${NACOS_GRPC_PORT:-9848}:9848"
+    environment:
+      MODE: standalone
+      PREFER_HOST_MODE: hostname
+      JVM_XMS: 512m
+      JVM_XMX: 512m
+      JVM_XMN: 256m
+    volumes:
+      - type: bind
+        source: ./.local/application.properties
+        target: /home/nacos/conf/application.properties
+        read_only: true
+        bind:
+          create_host_path: false
+      - nacos-data:/home/nacos/data
+      - nacos-logs:/home/nacos/logs
+    mem_limit: 1g
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8848/nacos/v1/console/health/readiness"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 45s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  nacos-data:
+  nacos-logs:
